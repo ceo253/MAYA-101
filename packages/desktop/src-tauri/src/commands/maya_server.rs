@@ -2,21 +2,21 @@ use tauri::{AppHandle, State};
 
 use crate::engine::manager::EngineManager;
 use crate::opencode_router::manager::OpenCodeRouterManager;
-use crate::openwork_server::manager::OpenworkServerManager;
-use crate::openwork_server::start_openwork_server;
+use crate::maya_server::manager::OpenworkServerManager;
+use crate::maya_server::start_maya_server;
 use crate::types::OpenworkServerInfo;
 
 #[tauri::command]
-pub fn openwork_server_info(manager: State<OpenworkServerManager>) -> OpenworkServerInfo {
+pub fn maya_server_info(manager: State<OpenworkServerManager>) -> OpenworkServerInfo {
     let mut state = manager
         .inner
         .lock()
-        .expect("openwork server mutex poisoned");
+        .expect("maya server mutex poisoned");
     OpenworkServerManager::snapshot_locked(&mut state)
 }
 
 #[tauri::command]
-pub fn openwork_server_restart(
+pub fn maya_server_restart(
     app: AppHandle,
     manager: State<OpenworkServerManager>,
     engine_manager: State<EngineManager>,
@@ -44,7 +44,7 @@ pub fn openwork_server_restart(
         .ok()
         .and_then(|state| state.health_port);
 
-    start_openwork_server(
+    start_maya_server(
         &app,
         &manager,
         &[workspace_path],

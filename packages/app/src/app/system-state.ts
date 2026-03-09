@@ -118,12 +118,12 @@ export function createSystemState(options: {
     try {
       const keys = Object.keys(window.localStorage);
       for (const key of keys) {
-        if (key.startsWith("openwork.")) {
+        if (key.startsWith("maya.")) {
           window.localStorage.removeItem(key);
         }
       }
       // Legacy compatibility key
-      window.localStorage.removeItem("openwork_mode_pref");
+      window.localStorage.removeItem("maya_mode_pref");
     } catch {
       // ignore
     }
@@ -207,7 +207,7 @@ export function createSystemState(options: {
     if (!reasons.length) {
       return {
         title: "Reload required",
-        body: "OpenWork detected changes that require reloading the OpenCode instance.",
+        body: "MAYA detected changes that require reloading the OpenCode instance.",
       };
     }
 
@@ -255,7 +255,7 @@ export function createSystemState(options: {
 
     return {
       title: "Reload required",
-      body: "OpenWork detected OpenCode configuration changes. Reload the engine to apply them.",
+      body: "MAYA detected OpenCode configuration changes. Reload the engine to apply them.",
     };
   });
 
@@ -348,13 +348,13 @@ export function createSystemState(options: {
         }
 
         try {
-          window.localStorage.setItem("openwork.notionStatus", nextStatus);
+          window.localStorage.setItem("maya.notionStatus", nextStatus);
           if (nextStatus === "connected") {
             const detail = options.notion.statusDetail();
             if (detail) {
-              window.localStorage.setItem("openwork.notionStatusDetail", detail);
+              window.localStorage.setItem("maya.notionStatusDetail", detail);
             } else {
-              window.localStorage.removeItem("openwork.notionStatusDetail");
+              window.localStorage.removeItem("maya.notionStatusDetail");
             }
           }
         } catch {
@@ -424,7 +424,7 @@ export function createSystemState(options: {
     try {
       const result = await sandboxCleanupOpenworkContainers();
       if (!result.candidates.length) {
-        setDockerCleanupResult("No OpenWork Docker containers found.");
+        setDockerCleanupResult("No MAYA Docker containers found.");
         return;
       }
 
@@ -437,7 +437,7 @@ export function createSystemState(options: {
         return;
       }
 
-      setDockerCleanupResult(`Removed ${removedCount} OpenWork Docker container(s).`);
+      setDockerCleanupResult(`Removed ${removedCount} MAYA Docker container(s).`);
     } catch (e) {
       setDockerCleanupResult(e instanceof Error ? e.message : safeStringify(e));
     } finally {

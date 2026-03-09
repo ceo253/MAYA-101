@@ -4,7 +4,7 @@ mod config;
 mod engine;
 mod fs;
 mod opencode_router;
-mod openwork_server;
+mod maya_server;
 mod opkg;
 mod orchestrator;
 mod paths;
@@ -25,18 +25,18 @@ use commands::engine::{
 };
 use commands::misc::{
     app_build_info, obsidian_is_available, open_in_obsidian, opencode_db_migrate,
-    opencode_mcp_auth, read_obsidian_mirror_file, reset_opencode_cache, reset_openwork_state,
+    opencode_mcp_auth, read_obsidian_mirror_file, reset_opencode_cache, reset_maya_state,
     write_obsidian_mirror_file,
 };
 use commands::opencode_router::{
     opencodeRouter_config_set, opencodeRouter_info, opencodeRouter_start, opencodeRouter_status,
     opencodeRouter_stop,
 };
-use commands::openwork_server::{openwork_server_info, openwork_server_restart};
+use commands::maya_server::{maya_server_info, maya_server_restart};
 use commands::opkg::{import_skill, opkg_install};
 use commands::orchestrator::{
     orchestrator_instance_dispose, orchestrator_start_detached, orchestrator_status,
-    orchestrator_workspace_activate, sandbox_cleanup_openwork_containers, sandbox_debug_probe,
+    orchestrator_workspace_activate, sandbox_cleanup_maya_containers, sandbox_debug_probe,
     sandbox_doctor, sandbox_stop,
 };
 use commands::scheduler::{scheduler_delete_job, scheduler_list_jobs};
@@ -47,13 +47,13 @@ use commands::updater::updater_environment;
 use commands::window::set_window_decorations;
 use commands::workspace::{
     workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
-    workspace_export_config, workspace_forget, workspace_import_config, workspace_openwork_read,
-    workspace_openwork_write, workspace_set_active, workspace_update_display_name,
+    workspace_export_config, workspace_forget, workspace_import_config, workspace_maya_read,
+    workspace_maya_write, workspace_set_active, workspace_update_display_name,
     workspace_update_remote,
 };
 use engine::manager::EngineManager;
 use opencode_router::manager::OpenCodeRouterManager;
-use openwork_server::manager::OpenworkServerManager;
+use maya_server::manager::OpenworkServerManager;
 use orchestrator::manager::OrchestratorManager;
 use tauri::Manager;
 use workspace::watch::WorkspaceWatchState;
@@ -65,8 +65,8 @@ fn stop_managed_services(app_handle: &tauri::AppHandle) {
     if let Ok(mut orchestrator) = app_handle.state::<OrchestratorManager>().inner.lock() {
         OrchestratorManager::stop_locked(&mut orchestrator);
     }
-    if let Ok(mut openwork_server) = app_handle.state::<OpenworkServerManager>().inner.lock() {
-        OpenworkServerManager::stop_locked(&mut openwork_server);
+    if let Ok(mut maya_server) = app_handle.state::<OpenworkServerManager>().inner.lock() {
+        OpenworkServerManager::stop_locked(&mut maya_server);
     }
     if let Ok(mut opencode_router) = app_handle.state::<OpenCodeRouterManager>().inner.lock() {
         OpenCodeRouterManager::stop_locked(&mut opencode_router);
@@ -106,9 +106,9 @@ pub fn run() {
             sandbox_doctor,
             sandbox_debug_probe,
             sandbox_stop,
-            sandbox_cleanup_openwork_containers,
-            openwork_server_info,
-            openwork_server_restart,
+            sandbox_cleanup_maya_containers,
+            maya_server_info,
+            maya_server_restart,
             opencodeRouter_info,
             opencodeRouter_start,
             opencodeRouter_stop,
@@ -127,8 +127,8 @@ pub fn run() {
             opencode_command_list,
             opencode_command_write,
             opencode_command_delete,
-            workspace_openwork_read,
-            workspace_openwork_write,
+            workspace_maya_read,
+            workspace_maya_write,
             opkg_install,
             import_skill,
             install_skill_template,
@@ -144,7 +144,7 @@ pub fn run() {
             open_in_obsidian,
             write_obsidian_mirror_file,
             read_obsidian_mirror_file,
-            reset_openwork_state,
+            reset_maya_state,
             reset_opencode_cache,
             opencode_db_migrate,
             opencode_mcp_auth,
@@ -153,11 +153,11 @@ pub fn run() {
             set_window_decorations
         ])
         .build(tauri::generate_context!())
-        .expect("error while building OpenWork");
+        .expect("error while building MAYA");
 
     // Best-effort cleanup on app exit. Without this, background sidecars can keep
     // running after the UI quits (especially during dev), leading to multiple
-    // orchestrator/opencode/openwork-server processes and stale ports.
+    // orchestrator/opencode/maya-server processes and stale ports.
     app.run(|app_handle, event| match event {
         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
             stop_managed_services(&app_handle);

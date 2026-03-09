@@ -29,7 +29,7 @@ function resolveTokenStorePath(config: ServerConfig): string {
   if (override) return resolve(override);
 
   const configPath = config.configPath?.trim();
-  const configDir = configPath ? dirname(configPath) : join(homedir(), ".config", "openwork");
+  const configDir = configPath ? dirname(configPath) : join(homedir(), ".config", "maya");
   return join(configDir, "tokens.json");
 }
 

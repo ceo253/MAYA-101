@@ -11,7 +11,7 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)))
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 const version = String(pkg.version || "").trim()
 if (!version) {
-  throw new Error("openwork-orchestrator version missing in packages/orchestrator/package.json")
+  throw new Error("maya-orchestrator version missing in packages/orchestrator/package.json")
 }
 
 const outroot = join(root, "dist", "npm")
@@ -43,7 +43,7 @@ function writeJson(filepath, data) {
 function platformPkgName(target) {
   const platform = target.id.split("-")[0]
   const arch = target.id.split("-").slice(1).join("-")
-  return `openwork-orchestrator-${platform}-${arch}`
+  return `maya-orchestrator-${platform}-${arch}`
 }
 
 const optionalDependencies = {}
@@ -54,16 +54,16 @@ for (const target of targets) {
   optionalDependencies[name] = version
 
   const ext = target.id.startsWith("windows") ? ".exe" : ""
-  const src = join(root, "dist", "bin", `openwork-${target.bun}${ext}`)
+  const src = join(root, "dist", "bin", `maya-${target.bun}${ext}`)
   if (!existsSync(src)) {
-    throw new Error(`Missing openwork binary at ${src}. Run: pnpm --filter openwork-orchestrator build:bin:all`)
+    throw new Error(`Missing maya binary at ${src}. Run: pnpm --filter maya-orchestrator build:bin:all`)
   }
 
   const dir = join(outroot, name)
   const bindir = join(dir, "bin")
   mkdirSync(bindir, { recursive: true })
 
-  const dest = join(bindir, `openwork${ext}`)
+  const dest = join(bindir, `maya${ext}`)
   copyFileSync(src, dest)
   if (!target.id.startsWith("windows")) {
     chmodSync(dest, 0o755)
@@ -72,13 +72,13 @@ for (const target of targets) {
   writeJson(join(dir, "package.json"), {
     name,
     version,
-    description: "Platform binary for openwork-orchestrator",
+    description: "Platform binary for maya-orchestrator",
     license: "MIT",
     os: [target.os],
     cpu: [target.cpu],
     bin: {
-      openwork: `./bin/openwork${ext}`,
-      "openwork-orchestrator": `./bin/openwork${ext}`,
+      maya: `./bin/maya${ext}`,
+      "maya-orchestrator": `./bin/maya${ext}`,
     },
     files: ["bin"],
   })
@@ -86,15 +86,15 @@ for (const target of targets) {
   published.push({ name, dir })
 }
 
-const meta = join(outroot, "openwork-orchestrator")
+const meta = join(outroot, "maya-orchestrator")
 mkdirSync(join(meta, "bin"), { recursive: true })
 
-const wrapperSrc = join(root, "bin", "openwork")
+const wrapperSrc = join(root, "bin", "maya")
 if (!existsSync(wrapperSrc)) {
   throw new Error(`Missing wrapper at ${wrapperSrc}`)
 }
-copyFileSync(wrapperSrc, join(meta, "bin", "openwork"))
-chmodSync(join(meta, "bin", "openwork"), 0o755)
+copyFileSync(wrapperSrc, join(meta, "bin", "maya"))
+chmodSync(join(meta, "bin", "maya"), 0o755)
 
 const postinstallSrc = join(root, "scripts", "postinstall.mjs")
 if (!existsSync(postinstallSrc)) {
@@ -103,13 +103,13 @@ if (!existsSync(postinstallSrc)) {
 copyFileSync(postinstallSrc, join(meta, basename(postinstallSrc)))
 
 writeJson(join(meta, "package.json"), {
-  name: "openwork-orchestrator",
+  name: "maya-orchestrator",
   version,
-  description: "OpenWork host orchestrator for opencode + OpenWork server + opencode-router",
+  description: "MAYA host orchestrator for opencode + MAYA server + opencode-router",
   license: "MIT",
   bin: {
-    openwork: "./bin/openwork",
-    "openwork-orchestrator": "./bin/openwork",
+    maya: "./bin/maya",
+    "maya-orchestrator": "./bin/maya",
   },
   scripts: {
     postinstall: "bun ./postinstall.mjs || node ./postinstall.mjs",
@@ -118,7 +118,7 @@ writeJson(join(meta, "package.json"), {
   files: ["bin", "postinstall.mjs"],
 })
 
-published.push({ name: "openwork-orchestrator", dir: meta })
+published.push({ name: "maya-orchestrator", dir: meta })
 
 for (const item of published) {
   if (dry) {

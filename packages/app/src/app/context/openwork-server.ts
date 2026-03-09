@@ -1,7 +1,7 @@
 /**
- * OpenWork server connection state.
+ * MAYA server connection state.
  *
- * Encapsulates all signals, effects, and helpers related to the OpenWork
+ * Encapsulates all signals, effects, and helpers related to the MAYA
  * server lifecycle: connection status, capabilities polling, host info,
  * diagnostics, audit entries, and the server client instance.
  */
@@ -19,9 +19,9 @@ import {
   type OpenworkServerDiagnostics,
   type OpenworkServerSettings,
   type OpenworkServerStatus,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import {
-  openworkServerInfo,
+  mayaServerInfo,
   orchestratorStatus,
   opencodeRouterInfo,
   type OrchestratorStatus,
@@ -185,7 +185,7 @@ export function createOpenworkServerStore(options: {
 
     const run = async () => {
       try {
-        const info = await openworkServerInfo();
+        const info = await mayaServerInfo();
         if (active) setHostInfo(info);
       } catch {
         if (active) setHostInfo(null);

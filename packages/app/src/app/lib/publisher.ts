@@ -4,7 +4,7 @@ export type PublishBundleResult = {
   url: string;
 };
 
-export const DEFAULT_OPENWORK_PUBLISHER_BASE_URL = "https://share.openwork.software";
+export const DEFAULT_OPENWORK_PUBLISHER_BASE_URL = "https://share.maya.software";
 
 function normalizeBaseUrl(input: string): string {
   const trimmed = String(input ?? "").trim();
@@ -51,9 +51,9 @@ export async function publishOpenworkBundleJson(input: {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "X-OpenWork-Bundle-Type": input.bundleType,
-        "X-OpenWork-Schema-Version": "v1",
-        ...(input.name?.trim() ? { "X-OpenWork-Name": input.name.trim() } : null),
+        "X-MAYA-Bundle-Type": input.bundleType,
+        "X-MAYA-Schema-Version": "v1",
+        ...(input.name?.trim() ? { "X-MAYA-Name": input.name.trim() } : null),
       },
       body: JSON.stringify(input.payload),
       signal: controller.signal,

@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import type { Agent, Part } from "@opencode-ai/sdk/v2/client";
 import type {
   ArtifactItem,
@@ -33,6 +34,7 @@ import {
 
 import {
   Box,
+  Book,
   Check,
   Circle,
   Cpu,
@@ -67,7 +69,7 @@ import {
   createOpenworkServerClient,
   OpenworkServerError,
   parseOpenworkWorkspaceIdFromUrl,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import type {
   OpenworkFileSession,
   OpenworkServerClient,
@@ -75,7 +77,7 @@ import type {
   OpenworkServerStatus,
   OpenworkSoulStatus,
   OpenworkWorkspaceExport,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import { DEFAULT_OPENWORK_PUBLISHER_BASE_URL, publishOpenworkBundleJson } from "../lib/publisher";
 import { join } from "@tauri-apps/api/path";
 import {
@@ -99,6 +101,8 @@ import FlyoutItem from "../components/flyout-item";
 import QuestionModal from "../components/question-modal";
 import ArtifactsPanel from "../components/session/artifacts-panel";
 import InboxPanel from "../components/session/inbox-panel";
+
+import MayaLogo from "../components/maya-logo";
 
 export type SessionViewProps = {
   selectedSessionId: string | null;
@@ -125,12 +129,12 @@ export type SessionViewProps = {
   exportWorkspaceConfig: (workspaceId?: string) => void;
   exportWorkspaceBusy: boolean;
   clientConnected: boolean;
-  openworkServerStatus: OpenworkServerStatus;
+  mayaServerStatus: OpenworkServerStatus;
   startupPreference: StartupPreference | null;
-  openworkServerClient: OpenworkServerClient | null;
-  openworkServerSettings: OpenworkServerSettings;
-  openworkServerHostInfo: OpenworkServerInfo | null;
-  openworkServerWorkspaceId: string | null;
+  mayaServerClient: OpenworkServerClient | null;
+  mayaServerSettings: OpenworkServerSettings;
+  mayaServerHostInfo: OpenworkServerInfo | null;
+  mayaServerWorkspaceId: string | null;
   engineInfo: EngineInfo | null;
   stopHost: () => void;
   headerStatus: string;
@@ -294,6 +298,7 @@ const COMMAND_PALETTE_THINKING_OPTIONS = [
 ] as const;
 
 export default function SessionView(props: SessionViewProps) {
+  const navigate = useNavigate();
   let messagesEndEl: HTMLDivElement | undefined;
   let bottomVisibilityEl: HTMLDivElement | undefined;
   let chatContainerEl: HTMLDivElement | undefined;
@@ -369,7 +374,7 @@ export default function SessionView(props: SessionViewProps) {
   const agentLabel = createMemo(() => props.selectedSessionAgent ?? "Default agent");
   const workspaceLabel = (workspace: WorkspaceInfo) =>
     workspace.displayName?.trim() ||
-    workspace.openworkWorkspaceName?.trim() ||
+    workspace.mayaWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     "Worker";
@@ -810,14 +815,14 @@ export default function SessionView(props: SessionViewProps) {
 
     pushCandidate(await join(root, normalized));
 
-    if (normalized.startsWith(".opencode/openwork/outbox/")) {
+    if (normalized.startsWith(".opencode/maya/outbox/")) {
       return candidates;
     }
 
-    if (normalized.startsWith("openwork/outbox/")) {
-      const suffix = normalized.slice("openwork/outbox/".length);
+    if (normalized.startsWith("maya/outbox/")) {
+      const suffix = normalized.slice("maya/outbox/".length);
       if (suffix) {
-        pushCandidate(await join(root, ".opencode", "openwork", "outbox", suffix));
+        pushCandidate(await join(root, ".opencode", "maya", "outbox", suffix));
       }
       return candidates;
     }
@@ -825,13 +830,13 @@ export default function SessionView(props: SessionViewProps) {
     if (normalized.startsWith("outbox/")) {
       const suffix = normalized.slice("outbox/".length);
       if (suffix) {
-        pushCandidate(await join(root, ".opencode", "openwork", "outbox", suffix));
+        pushCandidate(await join(root, ".opencode", "maya", "outbox", suffix));
       }
       return candidates;
     }
 
     if (!normalized.startsWith(".opencode/")) {
-      pushCandidate(await join(root, ".opencode", "openwork", "outbox", normalized));
+      pushCandidate(await join(root, ".opencode", "maya", "outbox", normalized));
     }
 
     return candidates;
@@ -912,7 +917,7 @@ export default function SessionView(props: SessionViewProps) {
   const remoteMirrorTrackedFiles = new Map<string, RemoteMirrorTrackedFile>();
   const [remoteFileSyncSession, setRemoteFileSyncSession] = createSignal<RemoteFileSyncSession | null>(null);
   const remoteMirrorWorkspaceKey = createMemo(
-    () => props.openworkServerWorkspaceId?.trim() || props.activeWorkspaceDisplay.id?.trim() || "remote-worker",
+    () => props.mayaServerWorkspaceId?.trim() || props.activeWorkspaceDisplay.id?.trim() || "remote-worker",
   );
   let remoteMirrorSyncTimer: number | undefined;
   let remoteMirrorSyncInFlight = false;
@@ -964,7 +969,7 @@ export default function SessionView(props: SessionViewProps) {
   };
 
   const closeRemoteFileSyncSession = async (session: RemoteFileSyncSession | null) => {
-    const client = props.openworkServerClient;
+    const client = props.mayaServerClient;
     if (!client || !session) return;
     try {
       await client.closeFileSession(session.id);
@@ -1023,10 +1028,10 @@ export default function SessionView(props: SessionViewProps) {
   const toRemoteArtifactCandidates = (file: string) => {
     const target = toWorkerRelativeArtifactPath(file);
     if (!target) return [] as string[];
-    const outboxPath = `.opencode/openwork/outbox/${target}`.replace(/\/+/g, "/");
+    const outboxPath = `.opencode/maya/outbox/${target}`.replace(/\/+/g, "/");
     if (
-      target.startsWith(".opencode/openwork/outbox/") ||
-      target.startsWith("./.opencode/openwork/outbox/") ||
+      target.startsWith(".opencode/maya/outbox/") ||
+      target.startsWith("./.opencode/maya/outbox/") ||
       outboxPath === target
     ) {
       return [target];
@@ -1035,10 +1040,10 @@ export default function SessionView(props: SessionViewProps) {
   };
 
   const ensureRemoteFileSyncSession = async (): Promise<RemoteFileSyncSession> => {
-    const client = props.openworkServerClient;
-    const workspaceId = props.openworkServerWorkspaceId?.trim() ?? "";
+    const client = props.mayaServerClient;
+    const workspaceId = props.mayaServerWorkspaceId?.trim() ?? "";
     if (!client || !workspaceId) {
-      throw new Error("Connect to OpenWork server to sync remote files.");
+      throw new Error("Connect to MAYA server to sync remote files.");
     }
 
     const existing = remoteFileSyncSession();
@@ -1080,8 +1085,8 @@ export default function SessionView(props: SessionViewProps) {
   };
 
   const refreshTrackedRemoteMirrorFile = async (session: RemoteFileSyncSession, path: string) => {
-    const client = props.openworkServerClient;
-    if (!client) throw new Error("OpenWork server client unavailable");
+    const client = props.mayaServerClient;
+    if (!client) throw new Error("MAYA server client unavailable");
 
     const result = await client.readFileBatch(session.id, [path]);
     const item = result.items[0];
@@ -1112,7 +1117,7 @@ export default function SessionView(props: SessionViewProps) {
 
   const createConflictPath = (path: string) => {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const marker = `.openwork-conflict-${stamp}`;
+    const marker = `.maya-conflict-${stamp}`;
     const dot = path.lastIndexOf(".");
     if (dot <= 0) {
       return `${path}${marker}`;
@@ -1127,7 +1132,7 @@ export default function SessionView(props: SessionViewProps) {
       return;
     }
 
-    const client = props.openworkServerClient;
+    const client = props.mayaServerClient;
     if (!client) {
       stopRemoteMirrorSyncLoop();
       return;
@@ -1237,9 +1242,9 @@ export default function SessionView(props: SessionViewProps) {
 
   const mirrorRemoteArtifactForObsidian = async (file: string) => {
     const session = await ensureRemoteFileSyncSession();
-    const client = props.openworkServerClient;
+    const client = props.mayaServerClient;
     if (!client) {
-      throw new Error("Connect to OpenWork server to sync remote files.");
+      throw new Error("Connect to MAYA server to sync remote files.");
     }
 
     const candidates = toRemoteArtifactCandidates(file);
@@ -1285,8 +1290,8 @@ export default function SessionView(props: SessionViewProps) {
         [
           isTauriRuntime(),
           props.activeWorkspaceDisplay.workspaceType,
-          props.openworkServerWorkspaceId?.trim() ?? "",
-          Boolean(props.openworkServerClient),
+          props.mayaServerWorkspaceId?.trim() ?? "",
+          Boolean(props.mayaServerClient),
         ] as const,
       ([desktopRuntime, workspaceType, workspaceId, hasClient], previous) => {
         const previousWorkspaceId = previous?.[2] ?? "";
@@ -1421,14 +1426,14 @@ export default function SessionView(props: SessionViewProps) {
   let initialAnchorGuardTimer: ReturnType<typeof setTimeout> | undefined;
   const attachmentsEnabled = createMemo(() => {
     if (props.activeWorkspaceDisplay.workspaceType !== "remote") return true;
-    return props.openworkServerStatus === "connected";
+    return props.mayaServerStatus === "connected";
   });
   const attachmentsDisabledReason = createMemo(() => {
     if (attachmentsEnabled()) return null;
-    if (props.openworkServerStatus === "limited") {
+    if (props.mayaServerStatus === "limited") {
       return "Add a server token to attach files.";
     }
-    return "Connect to OpenWork server to attach files.";
+    return "Connect to MAYA server to attach files.";
   });
 
   const scrollToLatest = (behavior: ScrollBehavior = "auto") => {
@@ -2565,9 +2570,9 @@ export default function SessionView(props: SessionViewProps) {
     const ws = shareWorkspace();
     if (!ws) return "";
     if (ws.workspaceType === "remote") {
-      if (ws.remoteType === "openwork") {
-        const hostUrl = ws.openworkHostUrl?.trim() || ws.baseUrl?.trim() || "";
-        const mounted = buildOpenworkWorkspaceBaseUrl(hostUrl, ws.openworkWorkspaceId);
+      if (ws.remoteType === "maya") {
+        const hostUrl = ws.mayaHostUrl?.trim() || ws.baseUrl?.trim() || "";
+        const mounted = buildOpenworkWorkspaceBaseUrl(hostUrl, ws.mayaWorkspaceId);
         return mounted || hostUrl;
       }
       return ws.baseUrl?.trim() || "";
@@ -2596,8 +2601,8 @@ export default function SessionView(props: SessionViewProps) {
 
   createEffect(() => {
     const ws = shareWorkspace();
-    const baseUrl = props.openworkServerHostInfo?.baseUrl?.trim() ?? "";
-    const token = props.openworkServerHostInfo?.clientToken?.trim() ?? "";
+    const baseUrl = props.mayaServerHostInfo?.baseUrl?.trim() ?? "";
+    const token = props.mayaServerHostInfo?.clientToken?.trim() ?? "";
     const workspacePath = ws?.workspaceType === "local" ? ws.path?.trim() ?? "" : "";
 
     if (!ws || ws.workspaceType !== "local" || !workspacePath || !baseUrl || !token) {
@@ -2641,30 +2646,30 @@ export default function SessionView(props: SessionViewProps) {
 
     if (ws.workspaceType !== "remote") {
       const hostUrl =
-        props.openworkServerHostInfo?.connectUrl?.trim() ||
-        props.openworkServerHostInfo?.lanUrl?.trim() ||
-        props.openworkServerHostInfo?.mdnsUrl?.trim() ||
-        props.openworkServerHostInfo?.baseUrl?.trim() ||
+        props.mayaServerHostInfo?.connectUrl?.trim() ||
+        props.mayaServerHostInfo?.lanUrl?.trim() ||
+        props.mayaServerHostInfo?.mdnsUrl?.trim() ||
+        props.mayaServerHostInfo?.baseUrl?.trim() ||
         "";
       const mountedUrl = shareLocalOpenworkWorkspaceId()
         ? buildOpenworkWorkspaceBaseUrl(hostUrl, shareLocalOpenworkWorkspaceId())
         : null;
       const url = mountedUrl || hostUrl;
-      const token = props.openworkServerHostInfo?.clientToken?.trim() || "";
+      const token = props.mayaServerHostInfo?.clientToken?.trim() || "";
       const inviteUrl = buildOpenworkConnectInviteUrl({
         workspaceUrl: url,
         token,
       });
       return [
         {
-          label: "OpenWork invite link",
+          label: "MAYA invite link",
           value: inviteUrl,
           secret: true,
           placeholder: !isTauriRuntime() ? "Desktop app required" : "Starting server...",
           hint: "One link that prefills worker URL and token.",
         },
         {
-          label: "OpenWork worker URL",
+          label: "MAYA worker URL",
           value: url,
           placeholder: !isTauriRuntime() ? "Desktop app required" : "Starting server...",
           hint: mountedUrl
@@ -2685,12 +2690,12 @@ export default function SessionView(props: SessionViewProps) {
       ];
     }
 
-    if (ws.remoteType === "openwork") {
-      const hostUrl = ws.openworkHostUrl?.trim() || ws.baseUrl?.trim() || "";
-      const url = buildOpenworkWorkspaceBaseUrl(hostUrl, ws.openworkWorkspaceId) || hostUrl;
+    if (ws.remoteType === "maya") {
+      const hostUrl = ws.mayaHostUrl?.trim() || ws.baseUrl?.trim() || "";
+      const url = buildOpenworkWorkspaceBaseUrl(hostUrl, ws.mayaWorkspaceId) || hostUrl;
       const token =
-        ws.openworkToken?.trim() ||
-        props.openworkServerSettings.token?.trim() ||
+        ws.mayaToken?.trim() ||
+        props.mayaServerSettings.token?.trim() ||
         "";
       const inviteUrl = buildOpenworkConnectInviteUrl({
         workspaceUrl: url,
@@ -2698,13 +2703,13 @@ export default function SessionView(props: SessionViewProps) {
       });
       return [
         {
-          label: "OpenWork invite link",
+          label: "MAYA invite link",
           value: inviteUrl,
           secret: true,
           hint: "One link that prefills worker URL and token.",
         },
         {
-          label: "OpenWork worker URL",
+          label: "MAYA worker URL",
           value: url,
         },
         {
@@ -2744,20 +2749,20 @@ export default function SessionView(props: SessionViewProps) {
   const shareServiceDisabledReason = createMemo(() => {
     const ws = shareWorkspace();
     if (!ws) return "Select a worker first.";
-    if (ws.workspaceType === "remote" && ws.remoteType !== "openwork") {
-      return "Share service links are available for OpenWork workers.";
+    if (ws.workspaceType === "remote" && ws.remoteType !== "maya") {
+      return "Share service links are available for MAYA workers.";
     }
     if (ws.workspaceType !== "remote") {
-      const baseUrl = props.openworkServerHostInfo?.baseUrl?.trim() ?? "";
-      const token = props.openworkServerHostInfo?.clientToken?.trim() ?? "";
+      const baseUrl = props.mayaServerHostInfo?.baseUrl?.trim() ?? "";
+      const token = props.mayaServerHostInfo?.clientToken?.trim() ?? "";
       if (!baseUrl || !token) {
-        return "Local OpenWork host is not ready yet.";
+        return "Local MAYA host is not ready yet.";
       }
     } else {
-      const hostUrl = ws.openworkHostUrl?.trim() || ws.baseUrl?.trim() || "";
-      const token = ws.openworkToken?.trim() || props.openworkServerSettings.token?.trim() || "";
-      if (!hostUrl) return "Missing OpenWork host URL.";
-      if (!token) return "Missing OpenWork token.";
+      const hostUrl = ws.mayaHostUrl?.trim() || ws.baseUrl?.trim() || "";
+      const token = ws.mayaToken?.trim() || props.mayaServerSettings.token?.trim() || "";
+      if (!hostUrl) return "Missing MAYA host URL.";
+      if (!token) return "Missing MAYA token.";
     }
     return null;
   });
@@ -2773,10 +2778,10 @@ export default function SessionView(props: SessionViewProps) {
     }
 
     if (ws.workspaceType !== "remote") {
-      const baseUrl = props.openworkServerHostInfo?.baseUrl?.trim() ?? "";
-      const token = props.openworkServerHostInfo?.clientToken?.trim() ?? "";
+      const baseUrl = props.mayaServerHostInfo?.baseUrl?.trim() ?? "";
+      const token = props.mayaServerHostInfo?.clientToken?.trim() ?? "";
       if (!baseUrl || !token) {
-        throw new Error("Local OpenWork host is not ready yet.");
+        throw new Error("Local MAYA host is not ready yet.");
       }
       const client = createOpenworkServerClient({ baseUrl, token });
 
@@ -2791,26 +2796,26 @@ export default function SessionView(props: SessionViewProps) {
       }
 
       if (!workspaceId) {
-        throw new Error("Could not resolve this worker on the local OpenWork host.");
+        throw new Error("Could not resolve this worker on the local MAYA host.");
       }
 
       return { client, workspaceId, workspace: ws };
     }
 
-    if (ws.remoteType !== "openwork") {
-      throw new Error("Share service links are available for OpenWork workers.");
+    if (ws.remoteType !== "maya") {
+      throw new Error("Share service links are available for MAYA workers.");
     }
 
-    const hostUrl = ws.openworkHostUrl?.trim() || ws.baseUrl?.trim() || "";
-    const token = ws.openworkToken?.trim() || props.openworkServerSettings.token?.trim() || "";
+    const hostUrl = ws.mayaHostUrl?.trim() || ws.baseUrl?.trim() || "";
+    const token = ws.mayaToken?.trim() || props.mayaServerSettings.token?.trim() || "";
     if (!hostUrl || !token) {
-      throw new Error("OpenWork host URL and token are required.");
+      throw new Error("MAYA host URL and token are required.");
     }
 
     const client = createOpenworkServerClient({ baseUrl: hostUrl, token });
     let workspaceId =
-      ws.openworkWorkspaceId?.trim() ||
-      parseOpenworkWorkspaceIdFromUrl(ws.openworkHostUrl ?? "") ||
+      ws.mayaWorkspaceId?.trim() ||
+      parseOpenworkWorkspaceIdFromUrl(ws.mayaHostUrl ?? "") ||
       parseOpenworkWorkspaceIdFromUrl(ws.baseUrl ?? "") ||
       "";
 
@@ -2820,18 +2825,18 @@ export default function SessionView(props: SessionViewProps) {
       const directoryHint = normalizeDirectoryPath(ws.directory?.trim() ?? ws.path?.trim() ?? "");
       const match = directoryHint
         ? items.find((entry) => {
-            const entryPath = normalizeDirectoryPath(
-              (entry.opencode?.directory ?? entry.directory ?? entry.path ?? "").trim(),
-            );
-            return Boolean(entryPath && entryPath === directoryHint);
-          })
+          const entryPath = normalizeDirectoryPath(
+            (entry.opencode?.directory ?? entry.directory ?? entry.path ?? "").trim(),
+          );
+          return Boolean(entryPath && entryPath === directoryHint);
+        })
         : (response.activeId ? items.find((entry) => entry.id === response.activeId) : null) ??
-          items[0];
+        items[0];
       workspaceId = (match?.id ?? "").trim();
     }
 
     if (!workspaceId) {
-      throw new Error("Could not resolve this worker on the OpenWork host.");
+      throw new Error("Could not resolve this worker on the MAYA host.");
     }
 
     return { client, workspaceId, workspace: ws };
@@ -2850,7 +2855,7 @@ export default function SessionView(props: SessionViewProps) {
         schemaVersion: 1,
         type: "workspace-profile",
         name: `${workspaceLabel(workspace)} profile`,
-        description: "Full OpenWork workspace profile with config, MCP setup, commands, and skills.",
+        description: "Full MAYA workspace profile with config, MCP setup, commands, and skills.",
         workspace: exported,
       };
 
@@ -2891,7 +2896,7 @@ export default function SessionView(props: SessionViewProps) {
         schemaVersion: 1,
         type: "skills-set",
         name: `${workspaceLabel(workspace)} skills`,
-        description: "Complete skills set from an OpenWork workspace.",
+        description: "Complete skills set from an MAYA workspace.",
         skills: skills.map((skill) => ({
           name: skill.name,
           description: skill.description,
@@ -3005,11 +3010,11 @@ export default function SessionView(props: SessionViewProps) {
     options?: { notify?: boolean },
   ): Promise<Array<{ name: string; path: string }>> => {
     const notify = options?.notify ?? true;
-    const client = props.openworkServerClient;
-    const workspaceId = props.openworkServerWorkspaceId?.trim() ?? "";
+    const client = props.mayaServerClient;
+    const workspaceId = props.mayaServerWorkspaceId?.trim() ?? "";
     if (!client || !workspaceId) {
       if (notify) {
-        setToastMessage("Connect to the OpenWork server to upload inbox files.");
+        setToastMessage("Connect to the MAYA server to upload inbox files.");
       }
       return [];
     }
@@ -3352,6 +3357,9 @@ export default function SessionView(props: SessionViewProps) {
   return (
     <div class="flex h-screen w-full bg-dls-sidebar text-gray-12 font-sans overflow-hidden">
       <aside class="w-[260px] hidden lg:flex flex-col bg-dls-sidebar border-r border-gray-6/70 p-3 pt-5">
+        <div class="mb-6 px-3">
+          <MayaLogo size={32} />
+        </div>
         <div class="flex-1 overflow-y-auto">
           <Show when={showUpdatePill()}>
             <button
@@ -3412,6 +3420,7 @@ export default function SessionView(props: SessionViewProps) {
       <main class="flex-1 flex flex-col overflow-hidden bg-gray-1">
         <header class="h-14 border-b border-gray-5 flex items-center justify-between px-6 bg-gray-1 z-10 shrink-0">
           <div class="flex items-center gap-3 min-w-0">
+            <MayaLogo size={24} class="md:hidden" />
             <Show when={showUpdatePill()}>
               <button
                 type="button"
@@ -3456,11 +3465,10 @@ export default function SessionView(props: SessionViewProps) {
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class={`h-9 px-2.5 flex items-center justify-center rounded-lg text-[11px] font-mono transition-colors ${
-                commandPaletteOpen()
-                  ? "bg-gray-4 text-gray-12"
-                  : "text-gray-10 hover:text-gray-12 hover:bg-gray-3"
-              }`}
+              class={`h-9 px-2.5 flex items-center justify-center rounded-lg text-[11px] font-mono transition-colors ${commandPaletteOpen()
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-10 hover:text-gray-12 hover:bg-gray-3"
+                }`}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -3477,11 +3485,10 @@ export default function SessionView(props: SessionViewProps) {
             </button>
             <button
               type="button"
-              class={`h-9 w-9 flex items-center justify-center rounded-lg transition-colors ${
-                searchOpen()
-                  ? "bg-gray-4 text-gray-12"
-                  : "text-gray-10 hover:text-gray-12 hover:bg-gray-3"
-              }`}
+              class={`h-9 w-9 flex items-center justify-center rounded-lg transition-colors ${searchOpen()
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-10 hover:text-gray-12 hover:bg-gray-3"
+                }`}
               onClick={() => {
                 if (searchOpen()) {
                   closeSearch();
@@ -3651,143 +3658,142 @@ export default function SessionView(props: SessionViewProps) {
               }}
             >
               <div class="max-w-[650px] mx-auto w-full">
-            <Show when={showWorkspaceSetupEmptyState()}>
-              <div class="mx-auto max-w-xl rounded-3xl border border-gray-6 bg-gray-2/60 p-8 text-center shadow-sm">
-                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-6 bg-gray-1 text-gray-11">
-                  <HardDrive size={24} />
-                </div>
-                <h3 class="text-2xl font-semibold text-gray-12">Set up your first worker</h3>
-                <p class="mt-2 text-sm text-gray-10">
-                  OpenWork needs a local or remote worker before you can start a session.
-                </p>
-                <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    class="rounded-2xl border border-gray-7 bg-gray-12 px-4 py-3 text-sm font-semibold text-gray-1 transition-colors hover:bg-gray-11"
-                    onClick={props.openCreateWorkspace}
-                  >
-                    Create local worker
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-2xl border border-gray-7 bg-gray-1 px-4 py-3 text-sm font-semibold text-gray-12 transition-colors hover:bg-gray-3"
-                    onClick={props.openCreateRemoteWorkspace}
-                  >
-                    Connect remote worker
-                  </button>
-                </div>
-              </div>
-            </Show>
-            <Show when={props.messages.length === 0 && !showWorkspaceSetupEmptyState()}>
-              <div class="text-center py-16 px-6 space-y-6">
-                <div class="w-16 h-16 bg-dls-hover rounded-3xl mx-auto flex items-center justify-center border border-dls-border">
-                  <Zap class="text-dls-secondary" />
-                </div>
-              <div class="space-y-2">
-                <h3 class="text-xl font-medium">What do you want to do?</h3>
-                <p class="text-dls-secondary text-sm max-w-sm mx-auto">
-                  Pick a starting point or just type below.
-                </p>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto text-left">
-                <button
-                  type="button"
-                  class="rounded-2xl border border-dls-border bg-dls-hover p-4 transition-all hover:bg-dls-active hover:border-gray-7"
-                  onClick={() => {
-                    void handleBrowserAutomationQuickstart();
-                  }}
-                >
-                  <div class="text-sm font-semibold text-dls-text">Automate your browser</div>
-                  <div class="mt-1 text-xs text-dls-secondary leading-relaxed">
-                    Set up browser actions and run reliable web tasks from OpenWork.
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  class="rounded-2xl border border-dls-border bg-dls-hover p-4 transition-all hover:bg-dls-active hover:border-gray-7"
-                  onClick={() => {
-                    void handleSoulQuickstart();
-                  }}
-                >
-                  <div class="text-sm font-semibold text-dls-text">Give me a soul</div>
-                  <div class="mt-1 text-xs text-dls-secondary leading-relaxed">
-                    Keep your goals and preferences across sessions with light scheduled check-ins.
-                    Tradeoff: more autonomy can create extra background runs, but revert is one command.
-                    Audit setup and heartbeat evidence from the Soul section.
-                  </div>
-                </button>
-              </div>
-            </div>
-          </Show>
-
-          <Show when={hiddenMessageCount() > 0 || hasServerEarlierMessages()}>
-            <div class="mb-4 flex justify-center">
-              <button
-                type="button"
-                class="rounded-full border border-dls-border bg-dls-hover/70 px-3 py-1 text-xs text-dls-secondary transition-colors hover:bg-dls-active hover:text-dls-text"
-                onClick={() => {
-                  void revealEarlierMessages();
-                }}
-                disabled={props.loadingEarlierMessages}
-              >
-                {props.loadingEarlierMessages
-                  ? "Loading earlier messages..."
-                  : hiddenMessageCount() > 0
-                    ? `Show ${nextRevealCount().toLocaleString()} earlier message${nextRevealCount() === 1 ? "" : "s"}`
-                    : "Load earlier messages"}
-              </button>
-            </div>
-          </Show>
-
-          <MessageList
-            messages={batchedRenderedMessages()}
-            isStreaming={showRunIndicator()}
-            developerMode={props.developerMode}
-            showThinking={props.showThinking}
-            workspaceRoot={props.activeWorkspaceRoot}
-            expandedStepIds={props.expandedStepIds}
-            setExpandedStepIds={props.setExpandedStepIds}
-            openSessionById={(sessionId) => props.setView("session", sessionId)}
-            searchMatchMessageIds={searchMatchMessageIds()}
-            activeSearchMessageId={activeSearchHit()?.messageId ?? null}
-            searchHighlightQuery={searchQueryDebounced().trim()}
-            scrollElement={() => chatContainerEl}
-            setScrollToMessageById={(handler) => {
-              scrollMessageIntoViewById = handler;
-            }}
-            footer={
-              showRunIndicator() ? (
-                <div class="flex justify-start pl-2">
-                  <div class="w-full max-w-[68ch]">
-                    <div
-                      class={`flex items-center gap-2 text-xs py-1 ${runPhase() === "error" ? "text-red-11" : "text-gray-9"}`}
-                      role="status"
-                      aria-live="polite"
-                    >
-                      <span
-                        class={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                          runPhase() === "error" ? "bg-red-9" : "bg-gray-8 animate-pulse"
-                        }`}
-                      />
-                      <span class="truncate">{thinkingStatus() || runLabel()}</span>
-                      <Show when={props.developerMode}>
-                        <span class="text-[10px] text-gray-8 ml-auto shrink-0">{runElapsedLabel()}</span>
-                      </Show>
+                <Show when={showWorkspaceSetupEmptyState()}>
+                  <div class="mx-auto max-w-xl rounded-3xl border border-gray-6 bg-gray-2/60 p-8 text-center shadow-sm">
+                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-6 bg-gray-1 text-gray-11">
+                      <HardDrive size={24} />
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-12">Set up your first worker</h3>
+                    <p class="mt-2 text-sm text-gray-10">
+                      MAYA needs a local or remote worker before you can start a session.
+                    </p>
+                    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        class="rounded-2xl border border-gray-7 bg-gray-12 px-4 py-3 text-sm font-semibold text-gray-1 transition-colors hover:bg-gray-11"
+                        onClick={props.openCreateWorkspace}
+                      >
+                        Create local worker
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-2xl border border-gray-7 bg-gray-1 px-4 py-3 text-sm font-semibold text-gray-12 transition-colors hover:bg-gray-3"
+                        onClick={props.openCreateRemoteWorkspace}
+                      >
+                        Connect remote worker
+                      </button>
                     </div>
                   </div>
-                </div>
-              ) : undefined
-            }
-          />
+                </Show>
+                <Show when={props.messages.length === 0 && !showWorkspaceSetupEmptyState()}>
+                  <div class="text-center py-16 px-6 space-y-6">
+                    <div class="w-16 h-16 bg-dls-hover rounded-3xl mx-auto flex items-center justify-center border border-dls-border">
+                      <Zap class="text-dls-secondary" />
+                    </div>
+                    <div class="space-y-2">
+                      <h3 class="text-xl font-medium">What do you want to do?</h3>
+                      <p class="text-dls-secondary text-sm max-w-sm mx-auto">
+                        Pick a starting point or just type below.
+                      </p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto text-left">
+                      <button
+                        type="button"
+                        class="rounded-2xl border border-dls-border bg-dls-hover p-4 transition-all hover:bg-dls-active hover:border-gray-7"
+                        onClick={() => {
+                          void handleBrowserAutomationQuickstart();
+                        }}
+                      >
+                        <div class="text-sm font-semibold text-dls-text">Automate your browser</div>
+                        <div class="mt-1 text-xs text-dls-secondary leading-relaxed">
+                          Set up browser actions and run reliable web tasks from MAYA.
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-2xl border border-dls-border bg-dls-hover p-4 transition-all hover:bg-dls-active hover:border-gray-7"
+                        onClick={() => {
+                          void handleSoulQuickstart();
+                        }}
+                      >
+                        <div class="text-sm font-semibold text-dls-text">Give me a soul</div>
+                        <div class="mt-1 text-xs text-dls-secondary leading-relaxed">
+                          Keep your goals and preferences across sessions with light scheduled check-ins.
+                          Tradeoff: more autonomy can create extra background runs, but revert is one command.
+                          Audit setup and heartbeat evidence from the Soul section.
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </Show>
 
-           <div
-             ref={(el) => {
-               messagesEndEl = el;
-               bottomVisibilityEl = el;
-             }}
-           />
-           </div>
-           </div>
+                <Show when={hiddenMessageCount() > 0 || hasServerEarlierMessages()}>
+                  <div class="mb-4 flex justify-center">
+                    <button
+                      type="button"
+                      class="rounded-full border border-dls-border bg-dls-hover/70 px-3 py-1 text-xs text-dls-secondary transition-colors hover:bg-dls-active hover:text-dls-text"
+                      onClick={() => {
+                        void revealEarlierMessages();
+                      }}
+                      disabled={props.loadingEarlierMessages}
+                    >
+                      {props.loadingEarlierMessages
+                        ? "Loading earlier messages..."
+                        : hiddenMessageCount() > 0
+                          ? `Show ${nextRevealCount().toLocaleString()} earlier message${nextRevealCount() === 1 ? "" : "s"}`
+                          : "Load earlier messages"}
+                    </button>
+                  </div>
+                </Show>
+
+                <MessageList
+                  messages={batchedRenderedMessages()}
+                  isStreaming={showRunIndicator()}
+                  developerMode={props.developerMode}
+                  showThinking={props.showThinking}
+                  workspaceRoot={props.activeWorkspaceRoot}
+                  expandedStepIds={props.expandedStepIds}
+                  setExpandedStepIds={props.setExpandedStepIds}
+                  openSessionById={(sessionId) => props.setView("session", sessionId)}
+                  searchMatchMessageIds={searchMatchMessageIds()}
+                  activeSearchMessageId={activeSearchHit()?.messageId ?? null}
+                  searchHighlightQuery={searchQueryDebounced().trim()}
+                  scrollElement={() => chatContainerEl}
+                  setScrollToMessageById={(handler) => {
+                    scrollMessageIntoViewById = handler;
+                  }}
+                  footer={
+                    showRunIndicator() ? (
+                      <div class="flex justify-start pl-2">
+                        <div class="w-full max-w-[68ch]">
+                          <div
+                            class={`flex items-center gap-2 text-xs py-1 ${runPhase() === "error" ? "text-red-11" : "text-gray-9"}`}
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <span
+                              class={`h-1.5 w-1.5 rounded-full shrink-0 ${runPhase() === "error" ? "bg-red-9" : "bg-gray-8 animate-pulse"
+                                }`}
+                            />
+                            <span class="truncate">{thinkingStatus() || runLabel()}</span>
+                            <Show when={props.developerMode}>
+                              <span class="text-[10px] text-gray-8 ml-auto shrink-0">{runElapsedLabel()}</span>
+                            </Show>
+                          </div>
+                        </div>
+                      </div>
+                    ) : undefined
+                  }
+                />
+
+                <div
+                  ref={(el) => {
+                    messagesEndEl = el;
+                    bottomVisibilityEl = el;
+                  }}
+                />
+              </div>
+            </div>
 
             <Show when={props.messages.length > 0 && !nearBottom()}>
               <div class="absolute bottom-4 left-0 right-0 z-20 flex justify-center pointer-events-none">
@@ -3802,121 +3808,119 @@ export default function SessionView(props: SessionViewProps) {
                 </div>
               </div>
             </Show>
-         </div>
+          </div>
 
         </div>
 
-      <Show when={todoCount() > 0}>
-        <div class="mx-auto w-full max-w-[68ch] px-4">
-          <div class="rounded-t-xl border border-b-0 border-gray-6/70 bg-gray-1/70 shadow-sm shadow-gray-12/5">
-            <button
-              type="button"
-              class="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-9 hover:bg-gray-2/50 transition-colors rounded-t-xl"
-              onClick={() => setTodoExpanded((prev) => !prev)}
-            >
-              <div class="flex items-center gap-2">
-                <ListTodo size={14} class="text-gray-8" />
-                <span class="text-gray-11 font-medium">{todoLabel()}</span>
-              </div>
-              <Minimize2
-                size={12}
-                class={`text-gray-8 transition-transform ${todoExpanded() ? "" : "rotate-180"}`}
-              />
-            </button>
-            <Show when={todoExpanded()}>
-              <div class="px-4 pb-3 space-y-2.5 max-h-60 overflow-auto border-t border-gray-6/50">
-                <For each={todoList()}>
-                  {(todo, index) => {
-                    const done = () => todo.status === "completed";
-                    const cancelled = () => todo.status === "cancelled";
-                    const active = () => todo.status === "in_progress";
-                    return (
-                      <div class="flex items-start gap-2.5 pt-2.5 first:pt-2.5">
-                        <div class="flex items-center gap-1.5 pt-0.5">
-                          <div
-                            class={`h-4.5 w-4.5 rounded-full border flex items-center justify-center ${
-                              done()
+        <Show when={todoCount() > 0}>
+          <div class="mx-auto w-full max-w-[68ch] px-4">
+            <div class="rounded-t-xl border border-b-0 border-gray-6/70 bg-gray-1/70 shadow-sm shadow-gray-12/5">
+              <button
+                type="button"
+                class="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-9 hover:bg-gray-2/50 transition-colors rounded-t-xl"
+                onClick={() => setTodoExpanded((prev) => !prev)}
+              >
+                <div class="flex items-center gap-2">
+                  <ListTodo size={14} class="text-gray-8" />
+                  <span class="text-gray-11 font-medium">{todoLabel()}</span>
+                </div>
+                <Minimize2
+                  size={12}
+                  class={`text-gray-8 transition-transform ${todoExpanded() ? "" : "rotate-180"}`}
+                />
+              </button>
+              <Show when={todoExpanded()}>
+                <div class="px-4 pb-3 space-y-2.5 max-h-60 overflow-auto border-t border-gray-6/50">
+                  <For each={todoList()}>
+                    {(todo, index) => {
+                      const done = () => todo.status === "completed";
+                      const cancelled = () => todo.status === "cancelled";
+                      const active = () => todo.status === "in_progress";
+                      return (
+                        <div class="flex items-start gap-2.5 pt-2.5 first:pt-2.5">
+                          <div class="flex items-center gap-1.5 pt-0.5">
+                            <div
+                              class={`h-4.5 w-4.5 rounded-full border flex items-center justify-center ${done()
                                 ? "border-green-6 bg-green-2 text-green-11"
                                 : active()
                                   ? "border-amber-6 bg-amber-2 text-amber-11"
                                   : cancelled()
                                     ? "border-gray-6 bg-gray-2 text-gray-8"
                                     : "border-gray-6 bg-gray-1 text-gray-8"
-                            }`}
+                                }`}
+                            >
+                              <Show when={done()}>
+                                <Check size={10} />
+                              </Show>
+                              <Show when={!done() && active()}>
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-9" />
+                              </Show>
+                            </div>
+                          </div>
+                          <div
+                            class={`flex-1 text-sm leading-relaxed ${cancelled() ? "text-gray-9 line-through" : "text-gray-12"
+                              }`}
                           >
-                            <Show when={done()}>
-                              <Check size={10} />
-                            </Show>
-                            <Show when={!done() && active()}>
-                              <span class="h-1.5 w-1.5 rounded-full bg-amber-9" />
-                            </Show>
+                            <span class="text-gray-9 mr-1.5">{index() + 1}.</span>
+                            {todo.content}
                           </div>
                         </div>
-                        <div
-                          class={`flex-1 text-sm leading-relaxed ${
-                            cancelled() ? "text-gray-9 line-through" : "text-gray-12"
-                          }`}
-                        >
-                          <span class="text-gray-9 mr-1.5">{index() + 1}.</span>
-                          {todo.content}
-                        </div>
-                      </div>
-                    );
-                  }}
-                </For>
-              </div>
-            </Show>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
+            </div>
           </div>
-        </div>
-      </Show>
+        </Show>
 
-      <Show when={!showWorkspaceSetupEmptyState()}>
-        <Composer
-          prompt={props.prompt}
-          developerMode={props.developerMode}
-          busy={props.busy}
-          isStreaming={showRunIndicator()}
-          onSend={handleSendPrompt}
-          onStop={cancelRun}
-          onDraftChange={handleDraftChange}
-          selectedModelLabel={props.selectedSessionModelLabel || "Model"}
-          onModelClick={props.openSessionModelPicker}
-          modelVariantLabel={props.modelVariantLabel}
-          modelVariant={props.modelVariant}
-          onModelVariantChange={props.setModelVariant}
-          agentLabel={agentLabel()}
-          selectedAgent={props.selectedSessionAgent}
-          agentPickerOpen={agentPickerOpen()}
-          agentPickerBusy={agentPickerBusy()}
-          agentPickerError={agentPickerError()}
-          agentOptions={agentOptions()}
-          onToggleAgentPicker={openAgentPicker}
-          onSelectAgent={(agent) => {
-            applySessionAgent(agent);
-            setAgentPickerOpen(false);
-          }}
-          setAgentPickerRef={(el) => {
-            agentPickerRef = el;
-          }}
-          showNotionBanner={props.showTryNotionPrompt}
-          onNotionBannerClick={props.onTryNotionPrompt}
-          toast={toastMessage()}
-          onToast={(message) => setToastMessage(message)}
-          listAgents={props.listAgents}
-          recentFiles={props.workingFiles}
-          searchFiles={props.searchFiles}
-          listCommands={props.listCommands}
-          isRemoteWorkspace={props.activeWorkspaceDisplay.workspaceType === "remote"}
-          isSandboxWorkspace={isSandboxWorkspace()}
-          onUploadInboxFiles={uploadInboxFiles}
-          attachmentsEnabled={attachmentsEnabled()}
-          attachmentsDisabledReason={attachmentsDisabledReason()}
-        />
-      </Show>
+        <Show when={!showWorkspaceSetupEmptyState()}>
+          <Composer
+            prompt={props.prompt}
+            developerMode={props.developerMode}
+            busy={props.busy}
+            isStreaming={showRunIndicator()}
+            onSend={handleSendPrompt}
+            onStop={cancelRun}
+            onDraftChange={handleDraftChange}
+            selectedModelLabel={props.selectedSessionModelLabel || "Model"}
+            onModelClick={props.openSessionModelPicker}
+            modelVariantLabel={props.modelVariantLabel}
+            modelVariant={props.modelVariant}
+            onModelVariantChange={props.setModelVariant}
+            agentLabel={agentLabel()}
+            selectedAgent={props.selectedSessionAgent}
+            agentPickerOpen={agentPickerOpen()}
+            agentPickerBusy={agentPickerBusy()}
+            agentPickerError={agentPickerError()}
+            agentOptions={agentOptions()}
+            onToggleAgentPicker={openAgentPicker}
+            onSelectAgent={(agent) => {
+              applySessionAgent(agent);
+              setAgentPickerOpen(false);
+            }}
+            setAgentPickerRef={(el) => {
+              agentPickerRef = el;
+            }}
+            showNotionBanner={props.showTryNotionPrompt}
+            onNotionBannerClick={props.onTryNotionPrompt}
+            toast={toastMessage()}
+            onToast={(message) => setToastMessage(message)}
+            listAgents={props.listAgents}
+            recentFiles={props.workingFiles}
+            searchFiles={props.searchFiles}
+            listCommands={props.listCommands}
+            isRemoteWorkspace={props.activeWorkspaceDisplay.workspaceType === "remote"}
+            isSandboxWorkspace={isSandboxWorkspace()}
+            onUploadInboxFiles={uploadInboxFiles}
+            attachmentsEnabled={attachmentsEnabled()}
+            attachmentsDisabledReason={attachmentsDisabledReason()}
+          />
+        </Show>
 
         <StatusBar
           clientConnected={props.clientConnected}
-          openworkServerStatus={props.openworkServerStatus}
+          mayaServerStatus={props.mayaServerStatus}
           startupPreference={props.startupPreference}
           developerMode={props.developerMode}
           onOpenSettings={() => openSettings("general")}
@@ -3931,98 +3935,106 @@ export default function SessionView(props: SessionViewProps) {
       <aside class="w-[280px] hidden xl:flex flex-col bg-dls-sidebar border-l border-gray-6/70 p-3">
         <div class="flex-1 overflow-y-auto space-y-5 pt-2">
           <div class="space-y-1 mb-2">
-          <button
-            type="button"
-            class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-              showRightSidebarSelection() && props.tab === "scheduled"
-                ? "bg-gray-4 text-gray-12"
-                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-            }`}
-            onClick={() => {
-              props.setTab("scheduled");
-              props.setView("dashboard");
-            }}
-          >
-            <History size={18} />
-            Automations
-          </button>
-          <button
-            type="button"
-            class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-              showRightSidebarSelection() && props.tab === "soul"
-                ? "bg-gray-4 text-gray-12"
-                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-            }`}
-            onClick={() => openSoul()}
-          >
-            <HeartPulse size={18} class={soulNavIconClass()} />
-            Soul
-          </button>
-          <button
-            type="button"
-            class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-              showRightSidebarSelection() && props.tab === "skills"
-                ? "bg-gray-4 text-gray-12"
-                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-            }`}
-            onClick={() => {
-              props.setTab("skills");
-              props.setView("dashboard");
-            }}
-          >
-            <Zap size={18} />
-            Skills
-          </button>
-          <button
-            type="button"
-            class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-              showRightSidebarSelection() && (props.tab === "mcp" || props.tab === "plugins")
-                ? "bg-gray-4 text-gray-12"
-                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-            }`}
-            onClick={() => {
-              props.setTab("mcp");
-              props.setView("dashboard");
-            }}
-          >
-            <Box size={18} />
-            Extensions
-          </button>
-          <button
-            type="button"
-            class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-              showRightSidebarSelection() && props.tab === "identities"
-                ? "bg-gray-4 text-gray-12"
-                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-            }`}
-            onClick={() => {
-              props.setTab("identities");
-              props.setView("dashboard");
-            }}
-          >
-            <MessageCircle size={18} />
-            Messaging
-          </button>
-          <Show when={props.developerMode}>
             <button
               type="button"
-              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${
-                showRightSidebarSelection() && props.tab === "config"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "scheduled"
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => {
+                props.setTab("scheduled");
+                props.setView("dashboard");
+              }}
+            >
+              <History size={18} />
+              Automations
+            </button>
+            <button
+              type="button"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "soul"
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => openSoul()}
+            >
+              <HeartPulse size={18} class={soulNavIconClass()} />
+              Soul
+            </button>
+            <button
+              type="button"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "skills"
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => {
+                props.setTab("skills");
+                props.setView("dashboard");
+              }}
+            >
+              <Zap size={18} />
+              Skills
+            </button>
+            <button
+              type="button"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && (props.tab === "mcp" || props.tab === "plugins")
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => {
+                props.setTab("mcp");
+                props.setView("dashboard");
+              }}
+            >
+              <Box size={18} />
+              Extensions
+            </button>
+            <button
+              type="button"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "identities"
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => {
+                props.setTab("identities");
+                props.setView("dashboard");
+              }}
+            >
+              <MessageCircle size={18} />
+              Messaging
+            </button>
+            <Show when={props.developerMode}>
+              <button
+                type="button"
+                class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "config"
                   ? "bg-gray-4 text-gray-12"
                   : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
-              }`}
-              onClick={openConfig}
+                  }`}
+                onClick={openConfig}
+              >
+                <SlidersHorizontal size={18} />
+                Advanced
+              </button>
+            </Show>
+            <button
+              type="button"
+              class={`w-full h-9 flex items-center gap-2.5 px-3 rounded-lg text-[13px] font-medium transition-colors ${showRightSidebarSelection() && props.tab === "documents"
+                ? "bg-gray-4 text-gray-12"
+                : "text-gray-11 hover:text-gray-12 hover:bg-gray-3"
+                }`}
+              onClick={() => {
+                props.setTab("documents");
+                props.setView("dashboard");
+              }}
             >
-              <SlidersHorizontal size={18} />
-              Advanced
+              <Book size={18} />
+              Documents
             </button>
-          </Show>
           </div>
 
           <InboxPanel
             id="sidebar-inbox"
-            client={props.openworkServerClient}
-            workspaceId={props.openworkServerWorkspaceId}
+            client={props.mayaServerClient}
+            workspaceId={props.mayaServerWorkspaceId}
             onToast={(message) => setToastMessage(message)}
           />
 
@@ -4097,11 +4109,10 @@ export default function SessionView(props: SessionViewProps) {
                           commandPaletteOptionRefs[idx()] = el;
                         }}
                         type="button"
-                        class={`w-full text-left rounded-xl px-3 py-2.5 transition-colors ${
-                          idx() === commandPaletteActiveIndex()
-                            ? "bg-dls-active text-dls-text"
-                            : "text-dls-text hover:bg-dls-hover"
-                        }`}
+                        class={`w-full text-left rounded-xl px-3 py-2.5 transition-colors ${idx() === commandPaletteActiveIndex()
+                          ? "bg-dls-active text-dls-text"
+                          : "text-dls-text hover:bg-dls-hover"
+                          }`}
                         onMouseEnter={() => setCommandPaletteActiveIndex(idx())}
                         onClick={item.action}
                       >

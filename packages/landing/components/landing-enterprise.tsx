@@ -29,11 +29,11 @@ const deploymentModes = [
   {
     title: "CLI-hosted server",
     description:
-      "Run OpenWork server surfaces from a trusted machine without inventing a parallel control plane.",
+      "Run MAYA server surfaces from a trusted machine without inventing a parallel control plane.",
     icon: Workflow
   },
   {
-    title: "Hosted OpenWork Cloud",
+    title: "Hosted MAYA Cloud",
     description:
       "Move the same workflows into hosted workers when a team needs always-on execution and managed isolation.",
     icon: Cloud
@@ -71,7 +71,7 @@ export function LandingEnterprise(props: Props) {
         <main className="mx-auto flex w-full max-w-5xl flex-col gap-16 px-6 pb-24 md:gap-20 md:px-8 md:pb-28">
           <section className="max-w-4xl">
             <div className="landing-chip mb-4 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              OpenWork Enterprise
+              MAYA Enterprise
             </div>
 
             <h1 className="mb-6 text-4xl font-medium leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
@@ -83,7 +83,7 @@ export function LandingEnterprise(props: Props) {
             </h1>
 
             <p className="max-w-3xl text-lg leading-relaxed text-slate-600 md:text-xl">
-              OpenWork runs local-first and scales into hosted workers when you
+              MAYA runs local-first and scales into hosted workers when you
               need them. We help teams deploy the same agent workflows with
               clear permissions, auditable behavior, and a rollout path that
               non-technical coworkers can actually use.
@@ -129,7 +129,7 @@ export function LandingEnterprise(props: Props) {
                 </h2>
                 <p className="mb-6 max-w-2xl text-[15px] leading-relaxed text-slate-600">
                   The goal is not to invent a separate enterprise fork. It is to
-                  make OpenWork safe enough, clear enough, and structured enough
+                  make MAYA safe enough, clear enough, and structured enough
                   for a team rollout without losing the speed of the local-first
                   experience.
                 </p>
@@ -185,7 +185,7 @@ export function LandingEnterprise(props: Props) {
                       Most teams should begin with one approval-sensitive
                       worker, one shared skill set, and one concrete business
                       process. Once that path is safe and legible, the same
-                      model extends into OpenWork Cloud and Den.
+                      model extends into MAYA Cloud and Den.
                     </p>
                   </div>
                   <div className="space-y-3">

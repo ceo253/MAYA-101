@@ -31,7 +31,7 @@ export function SiteFooter() {
           <Link href="/den" className="transition-colors hover:text-gray-800">
             Den
           </Link>
-          <div>© 2026 OpenWork Project.</div>
+          <div>© 2026 MAYA Project.</div>
         </div>
       </div>
     </footer>

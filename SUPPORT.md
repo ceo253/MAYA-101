@@ -12,7 +12,7 @@ Use the right channel to get faster help:
 ## Before opening an issue
 
 - Search existing issues to avoid duplicates.
-- Include exact OpenWork/OpenCode versions, OS, and reproduction steps.
+- Include exact MAYA/OpenCode versions, OS, and reproduction steps.
 - Add logs/screenshots when possible.
 
 ## Maintainer triage

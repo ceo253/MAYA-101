@@ -3,34 +3,54 @@
 
 @import "../styles/colors.css";
 
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
 :root {
   color-scheme: light;
-  --dls-surface: #ffffff;
-  --dls-sidebar: #f9fafb;
-  --dls-border: #e2e8f0;
+
+  /* Ambient Gradient Background */
+  --dls-bg: linear-gradient(135deg, #f0f4ff 0%, #e5eaf5 50%, #dbe4f0 100%);
+
+  /* Glassmorphism Structural Colors */
+  --dls-surface: rgba(255, 255, 255, 0.65);
+  --dls-sidebar: rgba(249, 250, 251, 0.45);
+  --dls-border: rgba(226, 232, 240, 0.5);
+
   --dls-accent: #1b29ff;
   --dls-accent-hover: #1d4ed8;
   --dls-accent-rgb: 27 41 255;
   --dls-text-primary: #111827;
   --dls-text-secondary: #64748b;
-  --dls-hover: #f8fafc;
-  --dls-active: #eaebef;
+
+  /* Interactive Glass States */
+  --dls-hover: rgba(248, 250, 252, 0.5);
+  --dls-active: rgba(234, 235, 239, 0.6);
+
   --dls-radius: 8px;
   --dls-radius-lg: 16px;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --dls-surface: #121212;
-  --dls-sidebar: #1a1a1a;
-  --dls-border: #262626;
+
+  /* Ambient Gradient Background */
+  --dls-bg: linear-gradient(135deg, #090a10 0%, #11131c 50%, #171026 100%);
+
+  /* Glassmorphism Structural Colors */
+  --dls-surface: rgba(18, 18, 18, 0.55);
+  --dls-sidebar: rgba(26, 26, 26, 0.45);
+  --dls-border: rgba(255, 255, 255, 0.08);
+  /* Lighter border for contrast on dark */
+
   --dls-accent: #3b82f6;
   --dls-accent-hover: #2563eb;
   --dls-accent-rgb: 59 130 246;
   --dls-text-primary: #ededed;
   --dls-text-secondary: #9ca3af;
-  --dls-hover: #1f1f1f;
-  --dls-active: #2d2d2d;
+
+  /* Interactive Glass States */
+  --dls-hover: rgba(255, 255, 255, 0.05);
+  --dls-active: rgba(255, 255, 255, 0.08);
 }
 
 html,
@@ -39,12 +59,13 @@ body {
 }
 
 html {
-  font-size: var(--openwork-font-size, 16px);
+  font-size: var(--maya-font-size, 16px);
 }
 
 body {
   margin: 0;
   font-family:
+    "Poppins",
     "IBM Plex Sans",
     Geist,
     "Avenir Next",
@@ -63,9 +84,21 @@ body {
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--dls-text-primary);
-  background-color: var(--dls-surface);
+  background: var(--dls-bg);
+  /* Use ambient background */
+  background-attachment: fixed;
+  /* Keep ambient background stable */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base Glass Effect Utilities */
+.bg-dls-surface,
+.bg-dls-sidebar,
+.bg-dls-hover,
+.bg-dls-active {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 /* Global clickable elements pointer */
@@ -92,11 +125,13 @@ select:disabled {
 }
 
 @keyframes soft-pulse {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 0.4;
   }
+
   50% {
     transform: scale(1.15);
     opacity: 1;
@@ -113,10 +148,12 @@ select:disabled {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6);
     border-color: rgba(99, 102, 241, 0.8);
   }
+
   50% {
     box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
     border-color: rgba(99, 102, 241, 0.4);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
     border-color: rgba(255, 255, 255, 0.08);
@@ -132,6 +169,7 @@ select:disabled {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(200%);
   }
@@ -142,6 +180,7 @@ select:disabled {
 }
 
 @keyframes soul-nav-pulse {
+
   0%,
   100% {
     transform: scale(1);

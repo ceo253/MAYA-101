@@ -2,7 +2,7 @@ type Props = {
   className?: string;
 };
 
-export function OpenWorkMark(props: Props) {
+export function MAYAMark(props: Props) {
   return (
     <svg
       viewBox="0 0 834 649"

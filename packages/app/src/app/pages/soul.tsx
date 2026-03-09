@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { Activity, CheckCircle2, Circle, HeartPulse, RefreshCw, Sparkles } from "lucide-solid";
 
-import type { OpenworkSoulHeartbeatEntry, OpenworkSoulStatus } from "../lib/openwork-server";
+import type { OpenworkSoulHeartbeatEntry, OpenworkSoulStatus } from "../lib/maya-server";
 import soulSetupTemplate from "../data/commands/give-me-a-soul.md?raw";
 import { formatRelativeTime, parseTemplateFrontmatter } from "../utils";
 

@@ -37,6 +37,7 @@ import McpAuthModal from "./components/mcp-auth-modal";
 import OnboardingView from "./pages/onboarding";
 import DashboardView from "./pages/dashboard";
 import SessionView from "./pages/session";
+import DocumentsView from "./pages/documents";
 import ProtoWorkspacesView from "./pages/proto-workspaces";
 import ProtoV1UxView from "./pages/proto-v1-ux";
 import { createClient, unwrap, waitForHealthy, type OpencodeAuth } from "./lib/opencode";
@@ -138,7 +139,7 @@ import {
   writeOpencodeConfig,
   schedulerDeleteJob,
   schedulerListJobs,
-  openworkServerInfo,
+  mayaServerInfo,
   orchestratorStatus,
   opencodeRouterInfo,
   setWindowDecorations,
@@ -176,11 +177,11 @@ import {
   type OpenworkServerSettings,
   type OpenworkWorkspaceExport,
   OpenworkServerError,
-} from "./lib/openwork-server";
+} from "./lib/maya-server";
 
 type RemoteWorkspaceDefaults = {
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
+  mayaHostUrl?: string | null;
+  mayaToken?: string | null;
   directory?: string | null;
   displayName?: string | null;
 };
@@ -397,13 +398,13 @@ function buildImportPayloadFromBundle(bundle: SharedBundleV1): {
   const payload: Record<string, unknown> = {
     mode: {
       opencode: "merge",
-      openwork: "merge",
+      maya: "merge",
       skills: "merge",
       commands: "merge",
     },
   };
   if (workspace.opencode && typeof workspace.opencode === "object") payload.opencode = workspace.opencode;
-  if (workspace.openwork && typeof workspace.openwork === "object") payload.openwork = workspace.openwork;
+  if (workspace.maya && typeof workspace.maya === "object") payload.maya = workspace.maya;
   if (Array.isArray(workspace.skills) && workspace.skills.length) payload.skills = workspace.skills;
   if (Array.isArray(workspace.commands) && workspace.commands.length) payload.commands = workspace.commands;
 
@@ -420,7 +421,7 @@ function parseSharedBundleDeepLink(rawUrl: string): SharedBundleDeepLink | null 
   }
 
   const protocol = url.protocol.toLowerCase();
-  if (protocol !== "openwork:" && protocol !== "https:" && protocol !== "http:") {
+  if (protocol !== "maya:" && protocol !== "https:" && protocol !== "http:") {
     return null;
   }
 
@@ -496,7 +497,7 @@ function parseRemoteConnectDeepLink(rawUrl: string): RemoteWorkspaceDefaults | n
   }
 
   const protocol = url.protocol.toLowerCase();
-  if (protocol !== "openwork:" && protocol !== "https:" && protocol !== "http:") {
+  if (protocol !== "maya:" && protocol !== "https:" && protocol !== "http:") {
     return null;
   }
 
@@ -508,8 +509,8 @@ function parseRemoteConnectDeepLink(rawUrl: string): RemoteWorkspaceDefaults | n
     return null;
   }
 
-  const hostUrlRaw = url.searchParams.get("openworkHostUrl") ?? url.searchParams.get("openworkUrl") ?? "";
-  const tokenRaw = url.searchParams.get("openworkToken") ?? url.searchParams.get("accessToken") ?? "";
+  const hostUrlRaw = url.searchParams.get("mayaHostUrl") ?? url.searchParams.get("mayaUrl") ?? "";
+  const tokenRaw = url.searchParams.get("mayaToken") ?? url.searchParams.get("accessToken") ?? "";
   const normalizedHostUrl = normalizeOpenworkServerUrl(hostUrlRaw);
   const token = tokenRaw.trim();
   if (!normalizedHostUrl || !token) {
@@ -521,8 +522,8 @@ function parseRemoteConnectDeepLink(rawUrl: string): RemoteWorkspaceDefaults | n
   const displayName = workerName || (workerId ? `Worker ${workerId.slice(0, 8)}` : "");
 
   return {
-    openworkHostUrl: normalizedHostUrl,
-    openworkToken: token,
+    mayaHostUrl: normalizedHostUrl,
+    mayaToken: token,
     directory: null,
     displayName: displayName || null,
   };
@@ -538,9 +539,9 @@ function stripRemoteConnectQuery(rawUrl: string): string | null {
 
   let changed = false;
   for (const key of [
-    "openworkHostUrl",
-    "openworkUrl",
-    "openworkToken",
+    "mayaHostUrl",
+    "mayaUrl",
+    "mayaToken",
     "accessToken",
     "workerId",
     "workerName",
@@ -567,7 +568,7 @@ export default function App() {
       : null;
 
   // Workspace switch tracing is noisy, so only emit in developer mode.
-  // (OpenWork already has a developer mode toggle in Settings.)
+  // (MAYA already has a developer mode toggle in Settings.)
   const wsDebugEnabled = () => developerMode();
 
   const wsDebug = (label: string, payload?: unknown) => {
@@ -667,42 +668,42 @@ export default function App() {
 
   const [engineCustomBinPath, setEngineCustomBinPath] = createSignal("");
 
-  const [engineRuntime, setEngineRuntime] = createSignal<EngineRuntime>("openwork-orchestrator");
+  const [engineRuntime, setEngineRuntime] = createSignal<EngineRuntime>("maya-orchestrator");
 
   const [baseUrl, setBaseUrl] = createSignal("http://127.0.0.1:4096");
   const [clientDirectory, setClientDirectory] = createSignal("");
 
-  const [openworkServerSettings, setOpenworkServerSettings] = createSignal<OpenworkServerSettings>({});
-  const [openworkServerUrl, setOpenworkServerUrl] = createSignal("");
-  const [openworkServerStatus, setOpenworkServerStatus] = createSignal<OpenworkServerStatus>("disconnected");
-  const [openworkServerCapabilities, setOpenworkServerCapabilities] = createSignal<OpenworkServerCapabilities | null>(null);
-  const [openworkServerCheckedAt, setOpenworkServerCheckedAt] = createSignal<number | null>(null);
-  const [openworkServerWorkspaceId, setOpenworkServerWorkspaceId] = createSignal<string | null>(null);
-  const [openworkServerHostInfo, setOpenworkServerHostInfo] = createSignal<OpenworkServerInfo | null>(null);
-  const [openworkServerDiagnostics, setOpenworkServerDiagnostics] = createSignal<OpenworkServerDiagnostics | null>(null);
-  const [openworkReconnectBusy, setOpenworkReconnectBusy] = createSignal(false);
+  const [mayaServerSettings, setOpenworkServerSettings] = createSignal<OpenworkServerSettings>({});
+  const [mayaServerUrl, setOpenworkServerUrl] = createSignal("");
+  const [mayaServerStatus, setOpenworkServerStatus] = createSignal<OpenworkServerStatus>("disconnected");
+  const [mayaServerCapabilities, setOpenworkServerCapabilities] = createSignal<OpenworkServerCapabilities | null>(null);
+  const [mayaServerCheckedAt, setOpenworkServerCheckedAt] = createSignal<number | null>(null);
+  const [mayaServerWorkspaceId, setOpenworkServerWorkspaceId] = createSignal<string | null>(null);
+  const [mayaServerHostInfo, setOpenworkServerHostInfo] = createSignal<OpenworkServerInfo | null>(null);
+  const [mayaServerDiagnostics, setOpenworkServerDiagnostics] = createSignal<OpenworkServerDiagnostics | null>(null);
+  const [mayaReconnectBusy, setOpenworkReconnectBusy] = createSignal(false);
   const [opencodeRouterInfoState, setOpenCodeRouterInfoState] = createSignal<OpenCodeRouterInfo | null>(null);
   const [orchestratorStatusState, setOrchestratorStatusState] = createSignal<OrchestratorStatus | null>(null);
-  const [openworkAuditEntries, setOpenworkAuditEntries] = createSignal<OpenworkAuditEntry[]>([]);
-  const [openworkAuditStatus, setOpenworkAuditStatus] = createSignal<"idle" | "loading" | "error">("idle");
-  const [openworkAuditError, setOpenworkAuditError] = createSignal<string | null>(null);
+  const [mayaAuditEntries, setOpenworkAuditEntries] = createSignal<OpenworkAuditEntry[]>([]);
+  const [mayaAuditStatus, setOpenworkAuditStatus] = createSignal<"idle" | "loading" | "error">("idle");
+  const [mayaAuditError, setOpenworkAuditError] = createSignal<string | null>(null);
   const [devtoolsWorkspaceId, setDevtoolsWorkspaceId] = createSignal<string | null>(null);
 
-  const openworkServerBaseUrl = createMemo(() => {
+  const mayaServerBaseUrl = createMemo(() => {
     const pref = startupPreference();
-    const hostInfo = openworkServerHostInfo();
-    const settingsUrl = normalizeOpenworkServerUrl(openworkServerSettings().urlOverride ?? "") ?? "";
+    const hostInfo = mayaServerHostInfo();
+    const settingsUrl = normalizeOpenworkServerUrl(mayaServerSettings().urlOverride ?? "") ?? "";
 
     if (pref === "local") return hostInfo?.baseUrl ?? "";
     if (pref === "server") return settingsUrl;
     return hostInfo?.baseUrl ?? settingsUrl;
   });
 
-  const openworkServerAuth = createMemo(
+  const mayaServerAuth = createMemo(
     () => {
       const pref = startupPreference();
-      const hostInfo = openworkServerHostInfo();
-      const settingsToken = openworkServerSettings().token?.trim() ?? "";
+      const hostInfo = mayaServerHostInfo();
+      const settingsToken = mayaServerSettings().token?.trim() ?? "";
       const clientToken = hostInfo?.clientToken?.trim() ?? "";
       const hostToken = hostInfo?.hostToken?.trim() ?? "";
 
@@ -723,14 +724,14 @@ export default function App() {
     },
   );
 
-  const openworkServerClient = createMemo(() => {
-    const baseUrl = openworkServerBaseUrl().trim();
+  const mayaServerClient = createMemo(() => {
+    const baseUrl = mayaServerBaseUrl().trim();
     if (!baseUrl) return null;
-    const auth = openworkServerAuth();
+    const auth = mayaServerAuth();
     return createOpenworkServerClient({ baseUrl, token: auth.token, hostToken: auth.hostToken });
   });
 
-  const devtoolsOpenworkClient = createMemo(() => openworkServerClient());
+  const devtoolsOpenworkClient = createMemo(() => mayaServerClient());
 
   createEffect(() => {
     if (typeof window === "undefined") return;
@@ -796,7 +797,7 @@ export default function App() {
         const webview = getCurrentWebview();
         void applyWebviewZoom(webview, next)
           .then(() => {
-            document.documentElement.style.removeProperty("--openwork-font-size");
+            document.documentElement.style.removeProperty("--maya-font-size");
           })
           .catch(() => {
             applyFontZoom(document.documentElement.style, next);
@@ -832,9 +833,9 @@ export default function App() {
 
   createEffect(() => {
     const pref = startupPreference();
-    const info = openworkServerHostInfo();
+    const info = mayaServerHostInfo();
     const hostUrl = info?.connectUrl ?? info?.lanUrl ?? info?.mdnsUrl ?? info?.baseUrl ?? "";
-    const settingsUrl = normalizeOpenworkServerUrl(openworkServerSettings().urlOverride ?? "") ?? "";
+    const settingsUrl = normalizeOpenworkServerUrl(mayaServerSettings().urlOverride ?? "") ?? "";
 
     if (pref === "local") {
       setOpenworkServerUrl(hostUrl);
@@ -876,8 +877,8 @@ export default function App() {
   createEffect(() => {
     if (typeof window === "undefined") return;
     if (!documentVisible()) return;
-    const url = openworkServerBaseUrl().trim();
-    const auth = openworkServerAuth();
+    const url = mayaServerBaseUrl().trim();
+    const auth = mayaServerAuth();
     const token = auth.token;
     const hostToken = auth.hostToken;
 
@@ -934,7 +935,7 @@ export default function App() {
 
     const run = async () => {
       try {
-        const info = await openworkServerInfo();
+        const info = await mayaServerInfo();
         if (active) setOpenworkServerHostInfo(info);
       } catch {
         if (active) setOpenworkServerHostInfo(null);
@@ -957,8 +958,8 @@ export default function App() {
       return;
     }
 
-    const client = openworkServerClient();
-    if (!client || openworkServerStatus() === "disconnected") {
+    const client = mayaServerClient();
+    if (!client || mayaServerStatus() === "disconnected") {
       setOpenworkServerDiagnostics(null);
       return;
     }
@@ -1090,7 +1091,7 @@ export default function App() {
   const [selectedSessionId, setSelectedSessionId] = createSignal<string | null>(
     null
   );
-  const SESSION_BY_WORKSPACE_KEY = "openwork.workspace-last-session.v1";
+  const SESSION_BY_WORKSPACE_KEY = "maya.workspace-last-session.v1";
   const readSessionByWorkspace = () => {
     if (typeof window === "undefined") return {} as Record<string, string>;
     try {
@@ -1670,7 +1671,7 @@ export default function App() {
   };
 
   // OpenCode keeps reverted messages in the log and uses `session.revert.messageID`
-  // as the visibility boundary. OpenWork mirrors that behavior by filtering the
+  // as the visibility boundary. MAYA mirrors that behavior by filtering the
   // displayed transcript.
   const visibleMessages = createMemo(() => {
     const list = messages();
@@ -1782,7 +1783,7 @@ export default function App() {
     if (!trimmed) {
       throw new Error("Session name is required");
     }
-    
+
     await renameSession(sessionID, trimmed);
     await refreshSidebarWorkspaceSessions(workspaceStore.activeWorkspaceId()).catch(() => undefined);
   }
@@ -2049,7 +2050,7 @@ export default function App() {
       messages,
       todos,
       exportedAt: new Date().toISOString(),
-      source: "openwork",
+      source: "maya",
     };
 
     const baseName = session.title || session.slug || session.id;
@@ -2120,10 +2121,10 @@ export default function App() {
     projectDir: () => workspaceProjectDir(),
     activeWorkspaceRoot: () => workspaceStore.activeWorkspaceRoot(),
     workspaceType: () => workspaceStore.activeWorkspaceDisplay().workspaceType,
-    openworkServerClient,
-    openworkServerStatus,
-    openworkServerCapabilities,
-    openworkServerWorkspaceId,
+    mayaServerClient,
+    mayaServerStatus,
+    mayaServerCapabilities,
+    mayaServerWorkspaceId,
     setBusy,
     setBusyLabel,
     setBusyStartedAt,
@@ -2131,7 +2132,7 @@ export default function App() {
     onNotionSkillInstalled: () => {
       setNotionSkillInstalled(true);
       try {
-        window.localStorage.setItem("openwork.notionSkillInstalled", "1");
+        window.localStorage.setItem("maya.notionSkillInstalled", "1");
       } catch {
         // ignore
       }
@@ -2374,10 +2375,10 @@ export default function App() {
     setView,
     setTab,
     isWindowsPlatform,
-    openworkServerSettings,
+    mayaServerSettings,
     updateOpenworkServerSettings,
-    openworkServerClient,
-    onEngineStable: () => {},
+    mayaServerClient,
+    onEngineStable: () => { },
     engineRuntime,
     developerMode,
   });
@@ -2452,12 +2453,12 @@ export default function App() {
 
     const baseUrl = workspace.baseUrl?.trim() ?? "";
     const directory = workspace.directory?.trim() ?? "";
-    if (workspace.remoteType === "openwork") {
+    if (workspace.remoteType === "maya") {
       // Sidebar session listing should be per-workspace and should not implicitly depend on
-      // global OpenWork server settings, otherwise switching between remotes can cause other
+      // global MAYA server settings, otherwise switching between remotes can cause other
       // workspace task lists to appear/disappear.
-      const token = workspace.openworkToken?.trim() ?? "";
-      const auth: OpencodeAuth | undefined = token ? { token, mode: "openwork" } : undefined;
+      const token = workspace.mayaToken?.trim() ?? "";
+      const auth: OpencodeAuth | undefined = token ? { token, mode: "maya" } : undefined;
       return {
         baseUrl,
         directory,
@@ -2609,13 +2610,13 @@ export default function App() {
         const root = ws.workspaceType === "local" ? ws.path?.trim() ?? "" : ws.directory?.trim() ?? "";
         const base = ws.workspaceType === "local" ? "" : ws.baseUrl?.trim() ?? "";
         const remoteType = ws.workspaceType === "remote" ? (ws.remoteType ?? "") : "";
-        const token = ws.remoteType === "openwork" ? (ws.openworkToken?.trim() ?? "") : "";
+        const token = ws.remoteType === "maya" ? (ws.mayaToken?.trim() ?? "") : "";
         return [ws.id, ws.workspaceType, remoteType, root, base, token].join("|");
       })
       .join(";");
 
     // Sidebar session refreshes should only be driven by the engine auth/baseUrl or the workspace
-    // definitions themselves. Global OpenWork server settings are intentionally excluded so that
+    // definitions themselves. Global MAYA server settings are intentionally excluded so that
     // connecting/activating a remote does not cause other workspace task lists to refresh (and
     // potentially disappear) due to auth fallback changes.
     if (engineKey === lastSidebarEngineKey && workspaceKey === lastSidebarWorkspaceKey) return;
@@ -2715,12 +2716,12 @@ export default function App() {
         continue;
       }
       const hostKey =
-        normalizeOpenworkServerUrl(workspace.openworkHostUrl?.trim() ?? "") ??
+        normalizeOpenworkServerUrl(workspace.mayaHostUrl?.trim() ?? "") ??
         normalizeOpenworkServerUrl(workspace.baseUrl?.trim() ?? "") ??
         "";
       const workspaceIdKey =
-        workspace.openworkWorkspaceId?.trim() ||
-        parseOpenworkWorkspaceIdFromUrl(workspace.openworkHostUrl ?? "") ||
+        workspace.mayaWorkspaceId?.trim() ||
+        parseOpenworkWorkspaceIdFromUrl(workspace.mayaHostUrl ?? "") ||
         parseOpenworkWorkspaceIdFromUrl(workspace.baseUrl ?? "") ||
         "";
       const directoryKey = normalizeDirectoryPath(workspace.directory?.trim() ?? workspace.path?.trim() ?? "");
@@ -2785,20 +2786,20 @@ export default function App() {
 
   createEffect(() => {
     const active = workspaceStore.activeWorkspaceDisplay();
-    const client = openworkServerClient();
-    const openworkUrl = openworkServerUrl().trim();
+    const client = mayaServerClient();
+    const mayaUrl = mayaServerUrl().trim();
 
-    if (!client || openworkServerStatus() !== "connected") {
+    if (!client || mayaServerStatus() !== "connected") {
       setOpenworkServerWorkspaceId(null);
       return;
     }
 
-    if (active.workspaceType === "remote" && active.remoteType === "openwork") {
+    if (active.workspaceType === "remote" && active.remoteType === "maya") {
       const inferredWorkspaceId =
-        parseOpenworkWorkspaceIdFromUrl(active.openworkHostUrl ?? "") ??
+        parseOpenworkWorkspaceIdFromUrl(active.mayaHostUrl ?? "") ??
         parseOpenworkWorkspaceIdFromUrl(active.baseUrl ?? "") ??
-        parseOpenworkWorkspaceIdFromUrl(openworkUrl);
-      const storedId = active.openworkWorkspaceId?.trim() || inferredWorkspaceId || envOpenworkWorkspaceId || null;
+        parseOpenworkWorkspaceIdFromUrl(mayaUrl);
+      const storedId = active.mayaWorkspaceId?.trim() || inferredWorkspaceId || envOpenworkWorkspaceId || null;
       if (storedId) {
         setOpenworkServerWorkspaceId(storedId);
         return;
@@ -2813,9 +2814,9 @@ export default function App() {
           const directoryHint = normalizeDirectoryPath(active.directory?.trim() ?? active.path?.trim() ?? "");
           const match = directoryHint
             ? items.find((entry) => {
-                const entryPath = normalizeDirectoryPath((entry.opencode?.directory ?? entry.directory ?? entry.path ?? "").trim());
-                return Boolean(entryPath && entryPath === directoryHint);
-              })
+              const entryPath = normalizeDirectoryPath((entry.opencode?.directory ?? entry.directory ?? entry.path ?? "").trim());
+              return Boolean(entryPath && entryPath === directoryHint);
+            })
             : (response.activeId ? items.find((entry) => entry.id === response.activeId) : null) ?? items[0];
           setOpenworkServerWorkspaceId(match?.id ?? response.activeId ?? null);
         } catch {
@@ -2862,8 +2863,8 @@ export default function App() {
 
   const resolveSharedBundleWorkerTarget = () => {
     const pref = startupPreference();
-    const hostInfo = openworkServerHostInfo();
-    const settings = openworkServerSettings();
+    const hostInfo = mayaServerHostInfo();
+    const settings = mayaServerSettings();
 
     const localHostUrl = normalizeOpenworkServerUrl(hostInfo?.baseUrl ?? "") ?? "";
     const localToken = hostInfo?.clientToken?.trim() ?? "";
@@ -2900,16 +2901,16 @@ export default function App() {
   const waitForSharedBundleImportTarget = async (timeoutMs = 20_000) => {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      const client = openworkServerClient();
-      const workspaceId = openworkServerWorkspaceId();
-      if (client && workspaceId && openworkServerStatus() === "connected") {
+      const client = mayaServerClient();
+      const workspaceId = mayaServerWorkspaceId();
+      if (client && workspaceId && mayaServerStatus() === "connected") {
         return { client, workspaceId };
       }
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 200);
       });
     }
-    throw new Error("OpenWork worker is not ready yet.");
+    throw new Error("MAYA worker is not ready yet.");
   };
 
   const createWorkerForSharedBundle = async (request: SharedBundleDeepLink, bundle: SharedBundleV1) => {
@@ -2917,13 +2918,13 @@ export default function App() {
     const hostUrl = target.hostUrl.trim();
     const token = target.token.trim();
     if (!hostUrl || !token) {
-      throw new Error("Share link detected. Configure an OpenWork worker host and token, then open the link again.");
+      throw new Error("Share link detected. Configure an MAYA worker host and token, then open the link again.");
     }
 
     const label = (request.label?.trim() || bundle.name?.trim() || "Shared setup").slice(0, 80);
     const ok = await workspaceStore.createRemoteWorkspaceFlow({
-      openworkHostUrl: hostUrl,
-      openworkToken: token,
+      mayaHostUrl: hostUrl,
+      mayaToken: token,
       directory: null,
       displayName: label,
       manageBusy: false,
@@ -2946,13 +2947,13 @@ export default function App() {
     }
 
     if (request.intent === "import_current") {
-      const client = openworkServerClient();
-      const workspaceId = openworkServerWorkspaceId();
-      const connected = openworkServerStatus() === "connected";
+      const client = mayaServerClient();
+      const workspaceId = mayaServerWorkspaceId();
+      const connected = mayaServerStatus() === "connected";
       if (!client || !workspaceId || !connected) {
         if (!sharedBundleNoticeShown()) {
           setSharedBundleNoticeShown(true);
-          setError("Share link detected. Connect to a writable OpenWork worker to import this bundle.");
+          setError("Share link detected. Connect to a writable MAYA worker to import this bundle.");
         }
         return;
       }
@@ -2961,7 +2962,7 @@ export default function App() {
       if (!target.hostUrl.trim() || !target.token.trim()) {
         if (!sharedBundleNoticeShown()) {
           setSharedBundleNoticeShown(true);
-          setError("Share link detected. Configure an OpenWork host and token to create a new worker.");
+          setError("Share link detected. Configure an MAYA host and token to create a new worker.");
         }
         return;
       }
@@ -2989,7 +2990,7 @@ export default function App() {
         await refreshHubSkills({ force: true });
         setError(null);
         if (importedSkillsCount > 0) {
-          console.log(`[openwork] imported ${importedSkillsCount} skills from share bundle`);
+          console.log(`[maya] imported ${importedSkillsCount} skills from share bundle`);
         }
       } catch (error) {
         if (!cancelled) {
@@ -3098,13 +3099,13 @@ export default function App() {
 
   createEffect(() => {
     const active = workspaceStore.activeWorkspaceDisplay();
-    if (active.workspaceType !== "remote" || active.remoteType !== "openwork") {
+    if (active.workspaceType !== "remote" || active.remoteType !== "maya") {
       return;
     }
-    const hostUrl = active.openworkHostUrl?.trim() ?? "";
+    const hostUrl = active.mayaHostUrl?.trim() ?? "";
     if (!hostUrl) return;
-    const token = active.openworkToken?.trim() ?? "";
-    const settings = openworkServerSettings();
+    const token = active.mayaToken?.trim() ?? "";
+    const settings = mayaServerSettings();
     if (settings.urlOverride?.trim() === hostUrl && (!token || settings.token?.trim() === token)) {
       return;
     }
@@ -3115,23 +3116,23 @@ export default function App() {
     });
   });
 
-  const openworkServerReady = createMemo(() => openworkServerStatus() === "connected");
-  const openworkServerWorkspaceReady = createMemo(() => Boolean(openworkServerWorkspaceId()));
-  const resolvedOpenworkCapabilities = createMemo(() => openworkServerCapabilities());
-  const openworkServerCanWriteSkills = createMemo(
+  const mayaServerReady = createMemo(() => mayaServerStatus() === "connected");
+  const mayaServerWorkspaceReady = createMemo(() => Boolean(mayaServerWorkspaceId()));
+  const resolvedOpenworkCapabilities = createMemo(() => mayaServerCapabilities());
+  const mayaServerCanWriteSkills = createMemo(
     () =>
-      openworkServerReady() &&
-      openworkServerWorkspaceReady() &&
+      mayaServerReady() &&
+      mayaServerWorkspaceReady() &&
       (resolvedOpenworkCapabilities()?.skills?.write ?? false),
   );
-  const openworkServerCanWritePlugins = createMemo(
+  const mayaServerCanWritePlugins = createMemo(
     () =>
-      openworkServerReady() &&
-      openworkServerWorkspaceReady() &&
+      mayaServerReady() &&
+      mayaServerWorkspaceReady() &&
       (resolvedOpenworkCapabilities()?.plugins?.write ?? false),
   );
-  const devtoolsCapabilities = createMemo(() => openworkServerCapabilities());
-  const resolvedDevtoolsWorkspaceId = createMemo(() => devtoolsWorkspaceId() ?? openworkServerWorkspaceId());
+  const devtoolsCapabilities = createMemo(() => mayaServerCapabilities());
+  const resolvedDevtoolsWorkspaceId = createMemo(() => devtoolsWorkspaceId() ?? mayaServerWorkspaceId());
 
   function updateOpenworkServerSettings(next: OpenworkServerSettings) {
     const stored = writeOpenworkServerSettings(next);
@@ -3204,8 +3205,8 @@ export default function App() {
     const workspace = workspaceStore.workspaces().find((item) => item.id === workspaceId) ?? null;
     if (!workspace || workspace.workspaceType !== "remote") return null;
     return {
-      openworkHostUrl: workspace.openworkHostUrl ?? workspace.baseUrl ?? "",
-      openworkToken: workspace.openworkToken ?? openworkServerSettings().token ?? "",
+      mayaHostUrl: workspace.mayaHostUrl ?? workspace.baseUrl ?? "",
+      mayaToken: workspace.mayaToken ?? mayaServerSettings().token ?? "",
       directory: workspace.directory ?? "",
       displayName: workspace.displayName ?? "",
     };
@@ -3217,9 +3218,9 @@ export default function App() {
     setRenameWorkspaceId(workspaceId);
     setRenameWorkspaceName(
       workspace.displayName?.trim() ||
-        workspace.openworkWorkspaceName?.trim() ||
-        workspace.name?.trim() ||
-        ""
+      workspace.mayaWorkspaceName?.trim() ||
+      workspace.name?.trim() ||
+      ""
     );
     setRenameWorkspaceOpen(true);
   };
@@ -3262,19 +3263,19 @@ export default function App() {
       setOpenworkServerCheckedAt(Date.now());
       return false;
     }
-    const result = await checkOpenworkServer(derived, next.token, openworkServerAuth().hostToken);
+    const result = await checkOpenworkServer(derived, next.token, mayaServerAuth().hostToken);
     setOpenworkServerStatus(result.status);
     setOpenworkServerCapabilities(result.capabilities);
     setOpenworkServerCheckedAt(Date.now());
     const ok = result.status === "connected" || result.status === "limited";
     if (ok && !isTauriRuntime()) {
       const active = workspaceStore.activeWorkspaceDisplay();
-      const shouldAttach = !client() || active.workspaceType !== "remote" || active.remoteType !== "openwork";
+      const shouldAttach = !client() || active.workspaceType !== "remote" || active.remoteType !== "maya";
       if (shouldAttach) {
         await workspaceStore
           .createRemoteWorkspaceFlow({
-            openworkHostUrl: derived,
-            openworkToken: next.token ?? null,
+            mayaHostUrl: derived,
+            mayaToken: next.token ?? null,
           })
           .catch(() => undefined);
       }
@@ -3283,13 +3284,13 @@ export default function App() {
   };
 
   const reconnectOpenworkServer = async () => {
-    if (openworkReconnectBusy()) return false;
+    if (mayaReconnectBusy()) return false;
     setOpenworkReconnectBusy(true);
     try {
-      let hostInfo = openworkServerHostInfo();
+      let hostInfo = mayaServerHostInfo();
       if (isTauriRuntime()) {
         try {
-          hostInfo = await openworkServerInfo();
+          hostInfo = await mayaServerInfo();
           setOpenworkServerHostInfo(hostInfo);
         } catch {
           hostInfo = null;
@@ -3300,14 +3301,14 @@ export default function App() {
       // Repair stale local token state by syncing settings token from the live host.
       if (hostInfo?.clientToken?.trim() && startupPreference() !== "server") {
         const liveToken = hostInfo.clientToken.trim();
-        const settings = openworkServerSettings();
+        const settings = mayaServerSettings();
         if ((settings.token?.trim() ?? "") !== liveToken) {
           updateOpenworkServerSettings({ ...settings, token: liveToken });
         }
       }
 
-      const url = openworkServerBaseUrl().trim();
-      const auth = openworkServerAuth();
+      const url = mayaServerBaseUrl().trim();
+      const auth = mayaServerAuth();
       if (!url) {
         setOpenworkServerStatus("disconnected");
         setOpenworkServerCapabilities(null);
@@ -3342,7 +3343,7 @@ export default function App() {
 
   const openWorkspaceConnectionSettings = (workspaceId: string) => {
     const workspace = workspaceStore.workspaces().find((item) => item.id === workspaceId) ?? null;
-    if (workspace?.workspaceType === "remote" && workspace.remoteType === "openwork") {
+    if (workspace?.workspaceType === "remote" && workspace.remoteType === "maya") {
       setEditRemoteWorkspaceId(workspace.id);
       setEditRemoteWorkspaceError(null);
       setEditRemoteWorkspaceOpen(true);
@@ -3364,7 +3365,7 @@ export default function App() {
   const canReloadWorkspace = createMemo(() => {
     if (canReloadLocalEngine()) return true;
     if (workspaceStore.activeWorkspaceDisplay().workspaceType !== "remote") return false;
-    return openworkServerStatus() === "connected" && Boolean(openworkServerClient() && openworkServerWorkspaceId());
+    return mayaServerStatus() === "connected" && Boolean(mayaServerClient() && mayaServerWorkspaceId());
   });
 
   const reloadWorkspaceEngineFromUi = async () => {
@@ -3376,9 +3377,9 @@ export default function App() {
       return false;
     }
 
-    const client = openworkServerClient();
-    const workspaceId = openworkServerWorkspaceId();
-    if (!client || !workspaceId || openworkServerStatus() !== "connected") {
+    const client = mayaServerClient();
+    const workspaceId = mayaServerWorkspaceId();
+    if (!client || !workspaceId || mayaServerStatus() !== "connected") {
       setError("Connect to this worker before applying runtime changes.");
       return false;
     }
@@ -3480,7 +3481,7 @@ export default function App() {
       setThemeMode("system");
       setEngineSource(isTauriRuntime() ? "sidecar" : "path");
       setEngineCustomBinPath("");
-      setEngineRuntime("openwork-orchestrator");
+      setEngineRuntime("maya-orchestrator");
       setDefaultModel(DEFAULT_MODEL);
       setLegacyDefaultModel(DEFAULT_MODEL);
       setDefaultModelExplicit(false);
@@ -3506,7 +3507,7 @@ export default function App() {
       setNotionSkillInstalled(false);
       setTryNotionPromptVisible(false);
 
-      return { ok: true, message: "Reset app config defaults. Restart OpenWork if any stale settings remain." };
+      return { ok: true, message: "Reset app config defaults. Restart MAYA if any stale settings remain." };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to reset app config defaults.";
       return { ok: false, message };
@@ -3567,7 +3568,7 @@ export default function App() {
   };
 
   onMount(() => {
-    // OpenCode hot reload drives freshness now; OpenWork no longer listens for
+    // OpenCode hot reload drives freshness now; MAYA no longer listens for
     // legacy reload-required events.
   });
 
@@ -3587,9 +3588,9 @@ export default function App() {
   const resolveOpenworkScheduler = () => {
     const isRemoteWorkspace = workspaceStore.activeWorkspaceDisplay().workspaceType === "remote";
     if (!isRemoteWorkspace) return null;
-    const client = openworkServerClient();
-    const workspaceId = openworkServerWorkspaceId();
-    if (openworkServerStatus() !== "connected" || !client || !workspaceId) return null;
+    const client = mayaServerClient();
+    const workspaceId = mayaServerWorkspaceId();
+    if (mayaServerStatus() !== "connected" || !client || !workspaceId) return null;
     return { client, workspaceId };
   };
 
@@ -3599,9 +3600,9 @@ export default function App() {
 
   const scheduledJobsSourceReady = createMemo(() => {
     if (scheduledJobsSource() !== "remote") return true;
-    const client = openworkServerClient();
-    const workspaceId = openworkServerWorkspaceId();
-    return openworkServerStatus() === "connected" && Boolean(client && workspaceId);
+    const client = mayaServerClient();
+    const workspaceId = mayaServerWorkspaceId();
+    return mayaServerStatus() === "connected" && Boolean(client && workspaceId);
   });
 
   const schedulerPluginInstalled = createMemo(() => isPluginInstalledByName("opencode-scheduler"));
@@ -3614,11 +3615,11 @@ export default function App() {
       if (!scheduler) {
         setScheduledJobs([]);
         const status =
-          openworkServerStatus() === "disconnected"
-            ? "OpenWork server unavailable. Connect to sync scheduled tasks."
-            : openworkServerStatus() === "limited"
-              ? "OpenWork server needs a token to load scheduled tasks."
-              : "OpenWork server not ready.";
+          mayaServerStatus() === "disconnected"
+            ? "MAYA server unavailable. Connect to sync scheduled tasks."
+            : mayaServerStatus() === "limited"
+              ? "MAYA server needs a token to load scheduled tasks."
+              : "MAYA server not ready.";
         setScheduledJobsStatus(status);
         return;
       }
@@ -3680,7 +3681,7 @@ export default function App() {
     if (scheduledJobsSource() === "remote") {
       const scheduler = resolveOpenworkScheduler();
       if (!scheduler) {
-        throw new Error("OpenWork server unavailable. Connect to sync scheduled tasks.");
+        throw new Error("MAYA server unavailable. Connect to sync scheduled tasks.");
       }
       const response = await scheduler.client.deleteScheduledJob(scheduler.workspaceId, name);
       setScheduledJobs((current) => current.filter((entry) => entry.slug !== response.job.slug));
@@ -3700,8 +3701,8 @@ export default function App() {
   };
 
   const resolveSoulWorkspaceMap = async () => {
-    const client = openworkServerClient();
-    if (!client || openworkServerStatus() !== "connected") {
+    const client = mayaServerClient();
+    if (!client || mayaServerStatus() !== "connected") {
       return {} as Record<string, string>;
     }
 
@@ -3727,13 +3728,13 @@ export default function App() {
         continue;
       }
 
-      if (workspace.remoteType !== "openwork") {
+      if (workspace.remoteType !== "maya") {
         continue;
       }
 
       const explicitId =
-        workspace.openworkWorkspaceId?.trim() ||
-        parseOpenworkWorkspaceIdFromUrl(workspace.openworkHostUrl ?? "") ||
+        workspace.mayaWorkspaceId?.trim() ||
+        parseOpenworkWorkspaceIdFromUrl(workspace.mayaHostUrl ?? "") ||
         parseOpenworkWorkspaceIdFromUrl(workspace.baseUrl ?? "");
       if (explicitId) {
         map[workspace.id] = explicitId;
@@ -3759,8 +3760,8 @@ export default function App() {
   const refreshSoulData = async (options?: { force?: boolean }) => {
     if (soulStatusBusy() && !options?.force) return;
 
-    const client = openworkServerClient();
-    if (!client || openworkServerStatus() !== "connected") {
+    const client = mayaServerClient();
+    if (!client || mayaServerStatus() !== "connected") {
       setSoulStatusByWorkspaceId({});
       setActiveSoulHeartbeats([]);
       setSoulHeartbeatsBusy(false);
@@ -3781,9 +3782,9 @@ export default function App() {
 
       let hadStatusError = false;
       await Promise.all(
-        workspaceIds.map(async ([workspaceId, openworkId]) => {
+        workspaceIds.map(async ([workspaceId, mayaId]) => {
           try {
-            const status = await client.getSoulStatus(openworkId);
+            const status = await client.getSoulStatus(mayaId);
             nextStatusByWorkspace[workspaceId] = status;
           } catch {
             hadStatusError = true;
@@ -3838,8 +3839,8 @@ export default function App() {
 
   let lastSoulRefreshKey = "";
   createEffect(() => {
-    const status = openworkServerStatus();
-    const hasClient = Boolean(openworkServerClient());
+    const status = mayaServerStatus();
+    const hasClient = Boolean(mayaServerClient());
     const activeWorkspaceId = workspaceStore.activeWorkspaceId();
     const workspacesKey = workspaceStore
       .workspaces()
@@ -3847,7 +3848,7 @@ export default function App() {
         const root = workspace.workspaceType === "local"
           ? workspace.path?.trim() ?? ""
           : workspace.directory?.trim() ?? workspace.path?.trim() ?? "";
-        return [workspace.id, workspace.workspaceType, workspace.remoteType ?? "", root, workspace.openworkWorkspaceId ?? ""].join("|");
+        return [workspace.id, workspace.workspaceType, workspace.remoteType ?? "", root, workspace.mayaWorkspaceId ?? ""].join("|");
       })
       .join(";");
     const key = [status, hasClient ? "1" : "0", activeWorkspaceId, workspacesKey].join("::");
@@ -3933,9 +3934,9 @@ export default function App() {
     if (isTauriRuntime()) return;
     if (autoConnectAttempted()) return;
     if (client()) return;
-    if (openworkServerStatus() !== "connected") return;
+    if (mayaServerStatus() !== "connected") return;
 
-    const settings = openworkServerSettings();
+    const settings = mayaServerSettings();
     if (!settings.urlOverride || !settings.token) return;
 
     setAutoConnectAttempted(true);
@@ -4102,7 +4103,7 @@ export default function App() {
 
     if (typeof window !== "undefined" && currentView() === "session") {
       requestAnimationFrame(() => {
-        window.dispatchEvent(new CustomEvent("openwork:focusPrompt"));
+        window.dispatchEvent(new CustomEvent("maya:focusPrompt"));
       });
     }
   }
@@ -4120,14 +4121,14 @@ export default function App() {
       return;
     }
 
-    const openworkClient = openworkServerClient();
-    const openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
+    const mayaClient = mayaServerClient();
+    const mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.mcp?.write;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.mcp?.write;
 
     if (!canUseOpenworkServer && !isTauriRuntime()) {
       setNotionError("Notion connections require the desktop app.");
@@ -4144,7 +4145,7 @@ export default function App() {
 
     try {
       if (canUseOpenworkServer) {
-        await openworkClient.addMcp(openworkWorkspaceId, {
+        await mayaClient.addMcp(mayaWorkspaceId, {
           name: "notion",
           config: {
             type: "remote",
@@ -4180,9 +4181,9 @@ export default function App() {
       await refreshMcpServers();
       setNotionStatusDetail(t("mcp.connecting", currentLocale()));
       try {
-        window.localStorage.setItem("openwork.notionStatus", "connecting");
-        window.localStorage.setItem("openwork.notionStatusDetail", t("mcp.connecting", currentLocale()));
-        window.localStorage.setItem("openwork.notionSkillInstalled", "0");
+        window.localStorage.setItem("maya.notionStatus", "connecting");
+        window.localStorage.setItem("maya.notionStatusDetail", t("mcp.connecting", currentLocale()));
+        window.localStorage.setItem("maya.notionSkillInstalled", "0");
       } catch {
         // ignore
       }
@@ -4198,18 +4199,18 @@ export default function App() {
     const projectDir = workspaceProjectDir().trim();
     const isRemoteWorkspace = workspaceStore.activeWorkspaceDisplay().workspaceType === "remote";
     const isLocalWorkspace = !isRemoteWorkspace;
-    const openworkClient = openworkServerClient();
-    const openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
+    const mayaClient = mayaServerClient();
+    const mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.mcp?.read;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.mcp?.read;
 
     if (isRemoteWorkspace) {
       if (!canUseOpenworkServer) {
-        setMcpStatus("OpenWork server unavailable. MCP config is read-only.");
+        setMcpStatus("MAYA server unavailable. MCP config is read-only.");
         setMcpServers([]);
         setMcpStatuses({});
         return;
@@ -4217,7 +4218,7 @@ export default function App() {
 
       try {
         setMcpStatus(null);
-        const response = await openworkClient.listMcp(openworkWorkspaceId);
+        const response = await mayaClient.listMcp(mayaWorkspaceId);
         const next = response.items.map((entry) => ({
           name: entry.name,
           config: entry.config as McpServerEntry["config"],
@@ -4251,7 +4252,7 @@ export default function App() {
     if (isLocalWorkspace && canUseOpenworkServer) {
       try {
         setMcpStatus(null);
-        const response = await openworkClient.listMcp(openworkWorkspaceId);
+        const response = await mayaClient.listMcp(mayaWorkspaceId);
         const next = response.items.map((entry) => ({
           name: entry.name,
           config: entry.config as McpServerEntry["config"],
@@ -4334,7 +4335,7 @@ export default function App() {
     const startedAt = perfNow();
     const isRemoteWorkspace =
       workspaceStore.activeWorkspaceDisplay().workspaceType === "remote" ||
-      (!isTauriRuntime() && openworkServerStatus() === "connected");
+      (!isTauriRuntime() && mayaServerStatus() === "connected");
     const projectDir = workspaceProjectDir().trim();
     const entryType = entry.type ?? "remote";
 
@@ -4345,15 +4346,15 @@ export default function App() {
       projectDir: projectDir || null,
     });
 
-    const openworkClient = openworkServerClient();
-    let openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
-    if (!openworkWorkspaceId && openworkClient && openworkServerStatus() === "connected") {
+    const mayaClient = mayaServerClient();
+    let mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
+    if (!mayaWorkspaceId && mayaClient && mayaServerStatus() === "connected") {
       try {
-        const response = await openworkClient.listWorkspaces();
+        const response = await mayaClient.listWorkspaces();
         const match = response.items?.[0];
         if (match?.id) {
-          openworkWorkspaceId = match.id;
+          mayaWorkspaceId = match.id;
           setOpenworkServerWorkspaceId(match.id);
         }
       } catch {
@@ -4361,15 +4362,15 @@ export default function App() {
       }
     }
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.mcp?.write;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.mcp?.write;
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      setMcpStatus("OpenWork server unavailable. MCP config is read-only.");
+      setMcpStatus("MAYA server unavailable. MCP config is read-only.");
       finishPerf(developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "openwork-server-unavailable",
+        reason: "maya-server-unavailable",
       });
       return;
     }
@@ -4392,11 +4393,11 @@ export default function App() {
 
     let activeClient = client();
     if (!activeClient) {
-      const openworkBaseUrl = openworkServerBaseUrl().trim();
-      const auth = openworkServerAuth();
-      if (openworkBaseUrl && auth.token) {
-        const opencodeUrl = `${openworkBaseUrl.replace(/\/+$/, "")}/opencode`;
-        activeClient = createClient(opencodeUrl, undefined, { token: auth.token, mode: "openwork" });
+      const mayaBaseUrl = mayaServerBaseUrl().trim();
+      const auth = mayaServerAuth();
+      if (mayaBaseUrl && auth.token) {
+        const opencodeUrl = `${mayaBaseUrl.replace(/\/+$/, "")}/opencode`;
+        activeClient = createClient(opencodeUrl, undefined, { token: auth.token, mode: "maya" });
         setClient(activeClient);
       }
     }
@@ -4458,8 +4459,8 @@ export default function App() {
         mcpEntryConfig["command"] = entry.command;
       }
 
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.addMcp(openworkWorkspaceId, {
+      if (canUseOpenworkServer && mayaClient && mayaWorkspaceId) {
+        await mayaClient.addMcp(mayaWorkspaceId, {
           name: slug,
           config: mcpEntryConfig,
         });
@@ -4549,18 +4550,18 @@ export default function App() {
   async function logoutMcpAuth(name: string) {
     const isRemoteWorkspace =
       workspaceStore.activeWorkspaceDisplay().workspaceType === "remote" ||
-      (!isTauriRuntime() && openworkServerStatus() === "connected");
+      (!isTauriRuntime() && mayaServerStatus() === "connected");
     const projectDir = workspaceProjectDir().trim();
 
-    const openworkClient = openworkServerClient();
-    let openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
-    if (!openworkWorkspaceId && openworkClient && openworkServerStatus() === "connected") {
+    const mayaClient = mayaServerClient();
+    let mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
+    if (!mayaWorkspaceId && mayaClient && mayaServerStatus() === "connected") {
       try {
-        const response = await openworkClient.listWorkspaces();
+        const response = await mayaClient.listWorkspaces();
         const match = response.items?.[0];
         if (match?.id) {
-          openworkWorkspaceId = match.id;
+          mayaWorkspaceId = match.id;
           setOpenworkServerWorkspaceId(match.id);
         }
       } catch {
@@ -4568,13 +4569,13 @@ export default function App() {
       }
     }
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.mcp?.write;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.mcp?.write;
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      setMcpStatus("OpenWork server unavailable. MCP auth is read-only.");
+      setMcpStatus("MAYA server unavailable. MCP auth is read-only.");
       return;
     }
 
@@ -4585,11 +4586,11 @@ export default function App() {
 
     let activeClient = client();
     if (!activeClient) {
-      const openworkBaseUrl = openworkServerBaseUrl().trim();
-      const auth = openworkServerAuth();
-      if (openworkBaseUrl && auth.token) {
-        const opencodeUrl = `${openworkBaseUrl.replace(/\/+$/, "")}/opencode`;
-        activeClient = createClient(opencodeUrl, undefined, { token: auth.token, mode: "openwork" });
+      const mayaBaseUrl = mayaServerBaseUrl().trim();
+      const auth = mayaServerAuth();
+      if (mayaBaseUrl && auth.token) {
+        const opencodeUrl = `${mayaBaseUrl.replace(/\/+$/, "")}/opencode`;
+        activeClient = createClient(opencodeUrl, undefined, { token: auth.token, mode: "maya" });
         setClient(activeClient);
       }
     }
@@ -4621,8 +4622,8 @@ export default function App() {
     setMcpStatus(null);
 
     try {
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.logoutMcpAuth(openworkWorkspaceId, safeName);
+      if (canUseOpenworkServer && mayaClient && mayaWorkspaceId) {
+        await mayaClient.logoutMcpAuth(mayaWorkspaceId, safeName);
       } else {
         try {
           await activeClient.mcp.disconnect({ directory: resolvedProjectDir, name: safeName });
@@ -4650,16 +4651,16 @@ export default function App() {
     try {
       setMcpStatus(null);
 
-      const openworkClient = openworkServerClient();
-      const openworkWorkspaceId = openworkServerWorkspaceId();
+      const mayaClient = mayaServerClient();
+      const mayaWorkspaceId = mayaServerWorkspaceId();
       const canUseOpenworkServer =
-        openworkServerStatus() === "connected" &&
-        openworkClient &&
-        openworkWorkspaceId &&
+        mayaServerStatus() === "connected" &&
+        mayaClient &&
+        mayaWorkspaceId &&
         resolvedOpenworkCapabilities()?.mcp?.write;
 
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.removeMcp(openworkWorkspaceId, name);
+      if (canUseOpenworkServer && mayaClient && mayaWorkspaceId) {
+        await mayaClient.removeMcp(mayaWorkspaceId, name);
       } else {
         const projectDir = workspaceProjectDir().trim();
         if (!projectDir) {
@@ -4688,7 +4689,7 @@ export default function App() {
     const perfEnabled = developerMode();
     const startedAt = perfNow();
     const runId = (() => {
-      const key = "__openwork_create_session_run__";
+      const key = "__maya_create_session_run__";
       const w = window as typeof window & { [key]?: number };
       w[key] = (w[key] ?? 0) + 1;
       return w[key];
@@ -4881,24 +4882,24 @@ export default function App() {
         // always stale after a relaunch. The correct baseUrl is provided by engine_info().
         // Web mode still needs the cached value since it connects to a fixed server URL.
         if (!isTauriRuntime()) {
-          const storedBaseUrl = window.localStorage.getItem("openwork.baseUrl");
+          const storedBaseUrl = window.localStorage.getItem("maya.baseUrl");
           if (storedBaseUrl) {
             setBaseUrl(storedBaseUrl);
           }
         }
 
         const storedClientDir = window.localStorage.getItem(
-          "openwork.clientDirectory"
+          "maya.clientDirectory"
         );
         if (storedClientDir) {
           setClientDirectory(storedClientDir);
         }
 
         const storedEngineSource = window.localStorage.getItem(
-          "openwork.engineSource"
+          "maya.engineSource"
         );
         const storedEngineCustomBinPath = window.localStorage.getItem(
-          "openwork.engineCustomBinPath"
+          "maya.engineCustomBinPath"
         );
         if (storedEngineCustomBinPath) {
           setEngineCustomBinPath(storedEngineCustomBinPath);
@@ -4916,9 +4917,9 @@ export default function App() {
         }
 
         const storedEngineRuntime = window.localStorage.getItem(
-          "openwork.engineRuntime"
+          "maya.engineRuntime"
         );
-        if (storedEngineRuntime === "direct" || storedEngineRuntime === "openwork-orchestrator") {
+        if (storedEngineRuntime === "direct" || storedEngineRuntime === "maya-orchestrator") {
           setEngineRuntime(storedEngineRuntime);
         }
 
@@ -4985,14 +4986,14 @@ export default function App() {
         }
 
         const storedUpdateAutoCheck = window.localStorage.getItem(
-          "openwork.updateAutoCheck"
+          "maya.updateAutoCheck"
         );
         if (storedUpdateAutoCheck === "0" || storedUpdateAutoCheck === "1") {
           setUpdateAutoCheck(storedUpdateAutoCheck === "1");
         }
 
         const storedUpdateAutoDownload = window.localStorage.getItem(
-          "openwork.updateAutoDownload"
+          "maya.updateAutoDownload"
         );
         if (storedUpdateAutoDownload === "0" || storedUpdateAutoDownload === "1") {
           const enabled = storedUpdateAutoDownload === "1";
@@ -5003,7 +5004,7 @@ export default function App() {
         }
 
         const storedUpdateCheckedAt = window.localStorage.getItem(
-          "openwork.updateLastCheckedAt"
+          "maya.updateLastCheckedAt"
         );
         if (storedUpdateCheckedAt) {
           const parsed = Number(storedUpdateCheckedAt);
@@ -5012,7 +5013,7 @@ export default function App() {
           }
         }
 
-        const storedNotionStatus = window.localStorage.getItem("openwork.notionStatus");
+        const storedNotionStatus = window.localStorage.getItem("maya.notionStatus");
         if (
           storedNotionStatus === "disconnected" ||
           storedNotionStatus === "connected" ||
@@ -5022,7 +5023,7 @@ export default function App() {
           setNotionStatus(storedNotionStatus);
         }
 
-        const storedNotionDetail = window.localStorage.getItem("openwork.notionStatusDetail");
+        const storedNotionDetail = window.localStorage.getItem("maya.notionStatusDetail");
         if (storedNotionDetail) {
           setNotionStatusDetail(storedNotionDetail);
         } else if (storedNotionStatus === "connecting") {
@@ -5031,7 +5032,7 @@ export default function App() {
 
         await refreshMcpServers();
 
-        const storedNotionSkillInstalled = window.localStorage.getItem("openwork.notionSkillInstalled");
+        const storedNotionSkillInstalled = window.localStorage.getItem("maya.notionSkillInstalled");
         if (storedNotionSkillInstalled === "1") {
           setNotionSkillInstalled(true);
         }
@@ -5144,14 +5145,14 @@ export default function App() {
     const workspaceType = workspaceStore.activeWorkspaceDisplay().workspaceType;
     const workspaceRoot = workspaceStore.activeWorkspacePath().trim();
     const activeClient = client();
-    const openworkClient = openworkServerClient();
-    const openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
+    const mayaClient = mayaServerClient();
+    const mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.read;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.config?.read;
 
     let cancelled = false;
 
@@ -5162,7 +5163,7 @@ export default function App() {
       if (workspaceType === "local" && workspaceRoot) {
         if (canUseOpenworkServer) {
           try {
-            const config = await openworkClient.getConfig(openworkWorkspaceId);
+            const config = await mayaClient.getConfig(mayaWorkspaceId);
             const model = typeof config.opencode?.model === "string" ? config.opencode.model : null;
             configDefault = parseModelRef(model);
           } catch {
@@ -5224,24 +5225,24 @@ export default function App() {
     const root = workspaceStore.activeWorkspacePath().trim();
     if (!root) return;
     const nextModel = defaultModel();
-    const openworkClient = openworkServerClient();
-    const openworkWorkspaceId = openworkServerWorkspaceId();
-    const openworkCapabilities = resolvedOpenworkCapabilities();
+    const mayaClient = mayaServerClient();
+    const mayaWorkspaceId = mayaServerWorkspaceId();
+    const mayaCapabilities = resolvedOpenworkCapabilities();
     const canUseOpenworkServer =
-      openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.write;
+      mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.config?.write;
     let cancelled = false;
 
     const writeConfig = async () => {
       try {
         if (canUseOpenworkServer) {
-          const config = await openworkClient.getConfig(openworkWorkspaceId);
+          const config = await mayaClient.getConfig(mayaWorkspaceId);
           const currentModel = typeof config.opencode?.model === "string" ? parseModelRef(config.opencode.model) : null;
           if (currentModel && modelEquals(currentModel, nextModel)) return;
 
-          await openworkClient.patchConfig(openworkWorkspaceId, {
+          await mayaClient.patchConfig(mayaWorkspaceId, {
             opencode: { model: formatModelRef(nextModel) },
           });
           markReloadRequired("config", {
@@ -5286,7 +5287,7 @@ export default function App() {
   createEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem("openwork.baseUrl", baseUrl());
+      window.localStorage.setItem("maya.baseUrl", baseUrl());
     } catch {
       // ignore
     }
@@ -5296,7 +5297,7 @@ export default function App() {
     if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(
-        "openwork.clientDirectory",
+        "maya.clientDirectory",
         clientDirectory()
       );
     } catch {
@@ -5308,7 +5309,7 @@ export default function App() {
     if (typeof window === "undefined") return;
     // Legacy key: keep for backwards compatibility.
     try {
-      window.localStorage.setItem("openwork.projectDir", workspaceProjectDir());
+      window.localStorage.setItem("maya.projectDir", workspaceProjectDir());
     } catch {
       // ignore
     }
@@ -5317,7 +5318,7 @@ export default function App() {
   createEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem("openwork.engineSource", engineSource());
+      window.localStorage.setItem("maya.engineSource", engineSource());
     } catch {
       // ignore
     }
@@ -5328,9 +5329,9 @@ export default function App() {
     try {
       const value = engineCustomBinPath().trim();
       if (value) {
-        window.localStorage.setItem("openwork.engineCustomBinPath", value);
+        window.localStorage.setItem("maya.engineCustomBinPath", value);
       } else {
-        window.localStorage.removeItem("openwork.engineCustomBinPath");
+        window.localStorage.removeItem("maya.engineCustomBinPath");
       }
     } catch {
       // ignore
@@ -5340,7 +5341,7 @@ export default function App() {
   createEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem("openwork.engineRuntime", engineRuntime());
+      window.localStorage.setItem("maya.engineRuntime", engineRuntime());
     } catch {
       // ignore
     }
@@ -5362,7 +5363,7 @@ export default function App() {
     if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(
-        "openwork.updateAutoCheck",
+        "maya.updateAutoCheck",
         updateAutoCheck() ? "1" : "0"
       );
     } catch {
@@ -5374,7 +5375,7 @@ export default function App() {
     if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(
-        "openwork.updateAutoDownload",
+        "maya.updateAutoDownload",
         updateAutoDownload() ? "1" : "0"
       );
     } catch {
@@ -5440,7 +5441,7 @@ export default function App() {
     if (state.state === "idle" && state.lastCheckedAt) {
       try {
         window.localStorage.setItem(
-          "openwork.updateLastCheckedAt",
+          "maya.updateLastCheckedAt",
           String(state.lastCheckedAt)
         );
       } catch {
@@ -5497,18 +5498,18 @@ export default function App() {
       return fallbackVersion || null;
     }
 
-    const openworkVersion =
+    const mayaVersion =
       appVersion()?.trim() ||
-      openworkServerDiagnostics()?.version?.trim() ||
+      mayaServerDiagnostics()?.version?.trim() ||
       "";
-    if (!openworkVersion) {
+    if (!mayaVersion) {
       return fallbackVersion || null;
     }
 
-    const normalizedVersion = openworkVersion.startsWith("v")
-      ? openworkVersion
-      : `v${openworkVersion}`;
-    return `OpenWork ${normalizedVersion}`;
+    const normalizedVersion = mayaVersion.startsWith("v")
+      ? mayaVersion
+      : `v${mayaVersion}`;
+    return `MAYA ${normalizedVersion}`;
   });
 
   const headerStatus = createMemo(() => {
@@ -5591,8 +5592,8 @@ export default function App() {
     rememberStartupChoice: rememberStartupChoice(),
     busy: busy(),
     clientDirectory: clientDirectory(),
-    openworkHostUrl: openworkServerSettings().urlOverride ?? "",
-    openworkToken: openworkServerSettings().token ?? "",
+    mayaHostUrl: mayaServerSettings().urlOverride ?? "",
+    mayaToken: mayaServerSettings().token ?? "",
     newAuthorizedDir: newAuthorizedDir(),
     authorizedDirs: workspaceStore.authorizedDirs(),
     activeWorkspacePath: workspaceStore.activeWorkspacePath(),
@@ -5619,12 +5620,12 @@ export default function App() {
     onClientDirectoryChange: setClientDirectory,
     onOpenworkHostUrlChange: (value: string) =>
       updateOpenworkServerSettings({
-        ...openworkServerSettings(),
+        ...mayaServerSettings(),
         urlOverride: value,
       }),
     onOpenworkTokenChange: (value: string) =>
       updateOpenworkServerSettings({
-        ...openworkServerSettings(),
+        ...mayaServerSettings(),
         token: value,
       }),
     onSelectStartup: workspaceStore.onSelectStartup,
@@ -5664,32 +5665,32 @@ export default function App() {
   const dashboardProps = () => {
     const workspaceType = activeWorkspaceDisplay().workspaceType;
     const isRemoteWorkspace = workspaceType === "remote";
-    const openworkStatus = openworkServerStatus();
+    const mayaStatus = mayaServerStatus();
     const canUseDesktopTools = isTauriRuntime() && !isRemoteWorkspace;
     const canInstallSkillCreator = isRemoteWorkspace
-      ? openworkServerCanWriteSkills()
+      ? mayaServerCanWriteSkills()
       : isTauriRuntime();
     const canEditPlugins = isRemoteWorkspace
-      ? openworkServerCanWritePlugins()
+      ? mayaServerCanWritePlugins()
       : isTauriRuntime();
     const canUseGlobalPluginScope = !isRemoteWorkspace && isTauriRuntime();
     const skillsAccessHint = isRemoteWorkspace
-      ? openworkStatus === "disconnected"
-        ? "OpenWork server unavailable. Add the server URL/token in Advanced to manage skills."
-        : openworkStatus === "limited"
-          ? "OpenWork server needs a host token to install/update skills. Add it in Advanced and reconnect."
-          : openworkServerCanWriteSkills()
+      ? mayaStatus === "disconnected"
+        ? "MAYA server unavailable. Add the server URL/token in Advanced to manage skills."
+        : mayaStatus === "limited"
+          ? "MAYA server needs a host token to install/update skills. Add it in Advanced and reconnect."
+          : mayaServerCanWriteSkills()
             ? null
-            : "OpenWork server is read-only for skills. Add a host token in Advanced to enable installs."
+            : "MAYA server is read-only for skills. Add a host token in Advanced to enable installs."
       : null;
     const pluginsAccessHint = isRemoteWorkspace
-      ? openworkStatus === "disconnected"
-        ? "OpenWork server unavailable. Plugins are read-only."
-        : openworkStatus === "limited"
-          ? "OpenWork server needs a token to edit plugins."
-          : openworkServerCanWritePlugins()
+      ? mayaStatus === "disconnected"
+        ? "MAYA server unavailable. Plugins are read-only."
+        : mayaStatus === "limited"
+          ? "MAYA server needs a token to edit plugins."
+          : mayaServerCanWritePlugins()
             ? null
-            : "OpenWork server is read-only for plugins."
+            : "MAYA server is read-only for plugins."
       : null;
 
     return {
@@ -5719,19 +5720,19 @@ export default function App() {
       newTaskDisabled: newTaskDisabled(),
       headerStatus: headerStatus(),
       error: error(),
-      openworkServerStatus: openworkStatus,
-      openworkServerUrl: openworkServerUrl(),
-      openworkServerClient: openworkServerClient(),
-      openworkReconnectBusy: openworkReconnectBusy(),
+      mayaServerStatus: mayaStatus,
+      mayaServerUrl: mayaServerUrl(),
+      mayaServerClient: mayaServerClient(),
+      mayaReconnectBusy: mayaReconnectBusy(),
       reconnectOpenworkServer,
-      openworkServerSettings: openworkServerSettings(),
-      openworkServerHostInfo: openworkServerHostInfo(),
-      openworkServerCapabilities: devtoolsCapabilities(),
-      openworkServerDiagnostics: openworkServerDiagnostics(),
-      openworkServerWorkspaceId: resolvedDevtoolsWorkspaceId(),
-      openworkAuditEntries: openworkAuditEntries(),
-      openworkAuditStatus: openworkAuditStatus(),
-      openworkAuditError: openworkAuditError(),
+      mayaServerSettings: mayaServerSettings(),
+      mayaServerHostInfo: mayaServerHostInfo(),
+      mayaServerCapabilities: devtoolsCapabilities(),
+      mayaServerDiagnostics: mayaServerDiagnostics(),
+      mayaServerWorkspaceId: resolvedDevtoolsWorkspaceId(),
+      mayaAuditEntries: mayaAuditEntries(),
+      mayaAuditStatus: mayaAuditStatus(),
+      mayaAuditError: mayaAuditError(),
       opencodeConnectStatus: opencodeConnectStatus(),
       engineInfo: workspaceStore.engine(),
       orchestratorStatus: orchestratorStatusState(),
@@ -5967,12 +5968,12 @@ export default function App() {
     exportWorkspaceConfig: workspaceStore.exportWorkspaceConfig,
     exportWorkspaceBusy: workspaceStore.exportingWorkspaceConfig(),
     clientConnected: Boolean(client()),
-    openworkServerStatus: openworkServerStatus(),
+    mayaServerStatus: mayaServerStatus(),
     startupPreference: startupPreference(),
-    openworkServerClient: openworkServerClient(),
-    openworkServerSettings: openworkServerSettings(),
-    openworkServerHostInfo: openworkServerHostInfo(),
-    openworkServerWorkspaceId: openworkServerWorkspaceId(),
+    mayaServerClient: mayaServerClient(),
+    mayaServerSettings: mayaServerSettings(),
+    mayaServerHostInfo: mayaServerHostInfo(),
+    mayaServerWorkspaceId: mayaServerWorkspaceId(),
     engineInfo: workspaceStore.engine(),
     stopHost,
     headerStatus: headerStatus(),
@@ -6062,7 +6063,7 @@ export default function App() {
       setTryNotionPromptVisible(false);
       setNotionSkillInstalled(true);
       try {
-        window.localStorage.setItem("openwork.notionSkillInstalled", "1");
+        window.localStorage.setItem("maya.notionSkillInstalled", "1");
       } catch {
         // ignore
       }
@@ -6073,6 +6074,7 @@ export default function App() {
   });
 
   const dashboardTabs = new Set<DashboardTab>([
+    "missioncontrol",
     "scheduled",
     "soul",
     "skills",
@@ -6081,6 +6083,7 @@ export default function App() {
     "identities",
     "config",
     "settings",
+    "documents",
   ]);
 
   const resolveDashboardTab = (value?: string | null) => {
@@ -6088,7 +6091,7 @@ export default function App() {
     if (dashboardTabs.has(normalized as DashboardTab)) {
       return normalized as DashboardTab;
     }
-    return "scheduled";
+    return "missioncontrol";
   };
 
   const initialRoute = () => {
@@ -6273,13 +6276,13 @@ export default function App() {
         onConfirmWorker={
           isTauriRuntime()
             ? async (preset, folder) => {
-                const ok = await workspaceStore.createSandboxFlow(preset, folder, {
-                  onReady: async () => {
-                    await createSessionAndOpen();
-                  },
-                });
-                if (!ok) return;
-              }
+              const ok = await workspaceStore.createSandboxFlow(preset, folder, {
+                onReady: async () => {
+                  await createSessionAndOpen();
+                },
+              });
+              if (!ok) return;
+            }
             : undefined
         }
         workerDisabled={(() => {

@@ -1,4 +1,4 @@
-# OpenWork Style Guide
+# MAYA Style Guide
 
 ## Principles
 1. **Premium & Native Feel**: The experience must feel polished, native to the OS, and not utilitarian. 

@@ -14,7 +14,7 @@ import {
   buildOpenworkWorkspaceBaseUrl,
   OpenworkServerError,
   parseOpenworkWorkspaceIdFromUrl,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import type {
   OpenworkServerClient,
   OpenworkOpenCodeRouterHealthSnapshot,
@@ -22,16 +22,16 @@ import type {
   OpenworkOpenCodeRouterSendResult,
   OpenworkServerStatus,
   OpenworkWorkspaceFileContent,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 
 export type IdentitiesViewProps = {
   busy: boolean;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkServerUrl: string;
-  openworkServerClient: OpenworkServerClient | null;
-  openworkReconnectBusy: boolean;
+  mayaServerStatus: OpenworkServerStatus;
+  mayaServerUrl: string;
+  mayaServerClient: OpenworkServerClient | null;
+  mayaReconnectBusy: boolean;
   reconnectOpenworkServer: () => Promise<boolean>;
-  openworkServerWorkspaceId: string | null;
+  mayaServerWorkspaceId: string | null;
   activeWorkspaceRoot: string;
   developerMode: boolean;
 };
@@ -180,20 +180,20 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
   const [reconnectError, setReconnectError] = createSignal<string | null>(null);
 
   const workspaceId = createMemo(() => {
-    const explicitId = props.openworkServerWorkspaceId?.trim() ?? "";
+    const explicitId = props.mayaServerWorkspaceId?.trim() ?? "";
     if (explicitId) return explicitId;
-    return parseOpenworkWorkspaceIdFromUrl(props.openworkServerUrl) ?? "";
+    return parseOpenworkWorkspaceIdFromUrl(props.mayaServerUrl) ?? "";
   });
 
   const scopedOpenworkBaseUrl = createMemo(() => {
-    const baseUrl = props.openworkServerUrl.trim();
+    const baseUrl = props.mayaServerUrl.trim();
     if (!baseUrl) return "";
     return buildOpenworkWorkspaceBaseUrl(baseUrl, workspaceId()) ?? baseUrl;
   });
 
-  const openworkServerClient = createMemo(() => props.openworkServerClient);
+  const mayaServerClient = createMemo(() => props.mayaServerClient);
 
-  const serverReady = createMemo(() => props.openworkServerStatus === "connected" && Boolean(openworkServerClient()));
+  const serverReady = createMemo(() => props.mayaServerStatus === "connected" && Boolean(mayaServerClient()));
   const scopedWorkspaceReady = createMemo(() => Boolean(workspaceId()));
   const defaultRoutingDirectory = createMemo(() => props.activeWorkspaceRoot.trim() || "Not set");
 
@@ -283,7 +283,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
       setAgentError("Worker scope unavailable.");
       return;
     }
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
 
     setAgentLoading(true);
@@ -314,7 +314,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
 
     setAgentSaving(true);
@@ -342,7 +342,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
 
     setAgentSaving(true);
@@ -374,7 +374,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
     const text = sendText().trim();
     if (!text) return;
@@ -404,7 +404,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
   const refreshAll = async (options?: { force?: boolean }) => {
     if (refreshing() && !options?.force) return;
     if (!serverReady()) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
     const id = workspaceId();
 
@@ -488,13 +488,13 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
   };
 
   const repairAndReconnect = async () => {
-    if (props.openworkReconnectBusy) return;
+    if (props.mayaReconnectBusy) return;
     setReconnectStatus(null);
     setReconnectError(null);
 
     const ok = await props.reconnectOpenworkServer();
     if (!ok) {
-      setReconnectError("Reconnect failed. Check OpenWork URL/token and try again.");
+      setReconnectError("Reconnect failed. Check MAYA URL/token and try again.");
       return;
     }
 
@@ -508,7 +508,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
 
     const token = telegramToken().trim();
@@ -563,7 +563,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
     if (!identityId.trim()) return;
 
@@ -606,7 +606,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
 
     const botToken = slackBotToken().trim();
@@ -641,7 +641,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
     if (!serverReady()) return;
     const id = workspaceId();
     if (!id) return;
-    const client = openworkServerClient();
+    const client = mayaServerClient();
     if (!client) return;
     if (!identityId.trim()) return;
 
@@ -713,9 +713,9 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
               variant="outline"
               class="h-8 px-3 text-xs"
               onClick={() => void repairAndReconnect()}
-              disabled={props.busy || props.openworkReconnectBusy}
+              disabled={props.busy || props.mayaReconnectBusy}
             >
-              <RefreshCcw size={14} class={props.openworkReconnectBusy ? "animate-spin" : ""} />
+              <RefreshCcw size={14} class={props.mayaReconnectBusy ? "animate-spin" : ""} />
               <span class="ml-1.5">Repair & reconnect</span>
             </Button>
             <Button
@@ -734,7 +734,7 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
           your worker will automatically read and respond to messages.
         </p>
         <div class="mt-1.5 text-[11px] text-gray-8 font-mono break-all">
-          Workspace scope: {scopedOpenworkBaseUrl().trim() || props.openworkServerUrl.trim() || "Not set"}
+          Workspace scope: {scopedOpenworkBaseUrl().trim() || props.mayaServerUrl.trim() || "Not set"}
         </div>
         <Show when={reconnectStatus()}>
           {(value) => <div class="mt-1 text-[11px] text-gray-9">{value()}</div>}
@@ -747,9 +747,9 @@ export default function IdentitiesView(props: IdentitiesViewProps) {
       {/* ---- Not connected to server ---- */}
       <Show when={!serverReady()}>
         <div class="rounded-xl border border-gray-4 bg-gray-1 p-5">
-          <div class="text-sm font-semibold text-gray-12">Connect to an OpenWork server</div>
+          <div class="text-sm font-semibold text-gray-12">Connect to an MAYA server</div>
           <div class="mt-1 text-xs text-gray-10">
-            Identities are available when you are connected to an OpenWork host (<code class="text-[11px] font-mono bg-gray-3 px-1 py-0.5 rounded">openwork</code>).
+            Identities are available when you are connected to an MAYA host (<code class="text-[11px] font-mono bg-gray-3 px-1 py-0.5 rounded">maya</code>).
           </div>
         </div>
       </Show>

@@ -5,7 +5,7 @@ import { CheckCircle2, ChevronDown, Circle, Globe } from "lucide-solid";
 
 import Button from "../components/button";
 import OnboardingWorkspaceSelector from "../components/onboarding-workspace-selector";
-import OpenWorkLogo from "../components/openwork-logo";
+import MAYALogo from "../components/maya-logo";
 import TextInput from "../components/text-input";
 import { isTauriRuntime, isWindowsPlatform } from "../utils/index";
 import { currentLocale, t } from "../../i18n";
@@ -16,8 +16,8 @@ export type OnboardingViewProps = {
   rememberStartupChoice: boolean;
   busy: boolean;
   clientDirectory: string;
-  openworkHostUrl: string;
-  openworkToken: string;
+  mayaHostUrl: string;
+  mayaToken: string;
   newAuthorizedDir: string;
   authorizedDirs: string[];
   activeWorkspacePath: string;
@@ -70,7 +70,7 @@ export type OnboardingViewProps = {
 export default function OnboardingView(props: OnboardingViewProps) {
   // Translation helper that uses current language from i18n
   const translate = (key: string) => t(key, currentLocale());
-  const [openworkTokenVisible, setOpenworkTokenVisible] = createSignal(false);
+  const [mayaTokenVisible, setOpenworkTokenVisible] = createSignal(false);
   const [connectingFallbackVisible, setConnectingFallbackVisible] = createSignal(false);
 
   createEffect(() => {
@@ -114,7 +114,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
           <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-2 via-gray-1 to-gray-1 opacity-50" />
           <div class="z-10 flex flex-col items-center gap-6">
             <div class="relative">
-              <OpenWorkLogo size={40} />
+              <MAYALogo size={40} />
             </div>
             <div class="text-center">
               <h2 class="text-xl font-medium mb-2">
@@ -156,15 +156,15 @@ export default function OnboardingView(props: OnboardingViewProps) {
           <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-2 to-transparent opacity-20 pointer-events-none" />
 
           <div class="max-w-lg w-full z-10 space-y-6">
-              <div class="text-center space-y-2">
-                <div class="">
-                  <OpenWorkLogo size={48} />
-                </div>
+            <div class="text-center space-y-2">
+              <div class="">
+                <MAYALogo size={48} />
+              </div>
               <h2 class="text-2xl font-bold tracking-tight">
                 {props.workspaces.length <= 1 ? translate("onboarding.create_first_workspace") : translate("onboarding.create_workspace")}
               </h2>
               <p class="text-gray-11 text-sm leading-relaxed">
-                  {translate("onboarding.workspace_folder_label")}
+                {translate("onboarding.workspace_folder_label")}
               </p>
             </div>
 
@@ -176,31 +176,28 @@ export default function OnboardingView(props: OnboardingViewProps) {
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
-                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                      props.themeMode === "system"
+                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${props.themeMode === "system"
                         ? "bg-gray-12/10 text-gray-12 border-gray-6/30"
                         : "text-gray-10 border-gray-6 hover:text-gray-12"
-                    }`}
+                      }`}
                     onClick={() => props.setThemeMode("system")}
                   >
                     {translate("onboarding.theme_system")}
                   </button>
                   <button
-                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                      props.themeMode === "light"
+                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${props.themeMode === "light"
                         ? "bg-gray-12/10 text-gray-12 border-gray-6/30"
                         : "text-gray-10 border-gray-6 hover:text-gray-12"
-                    }`}
+                      }`}
                     onClick={() => props.setThemeMode("light")}
                   >
                     {translate("onboarding.theme_light")}
                   </button>
                   <button
-                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                      props.themeMode === "dark"
+                    class={`text-xs px-3 py-1 rounded-full border transition-colors ${props.themeMode === "dark"
                         ? "bg-gray-12/10 text-gray-12 border-gray-6/30"
                         : "text-gray-10 border-gray-6 hover:text-gray-12"
-                    }`}
+                      }`}
                     onClick={() => props.setThemeMode("dark")}
                   >
                     {translate("onboarding.theme_dark")}
@@ -209,7 +206,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
               </div>
 
               <OnboardingWorkspaceSelector
-                defaultPath="~/OpenWork/Worker"
+                defaultPath="~/MAYA/Worker"
                 onConfirm={props.onCreateWorkspace}
                 onPickFolder={props.onPickWorkspaceFolder}
               />
@@ -218,8 +215,8 @@ export default function OnboardingView(props: OnboardingViewProps) {
                 <div class="flex items-center justify-between gap-4">
                   <div class="min-w-0">
                     <div class="text-xs font-semibold text-gray-10 uppercase tracking-wider">Import</div>
-                    <div class="mt-1 text-sm text-gray-12">Use an existing workspace config.</div>
-                    <div class="text-xs text-gray-10">Imports `.opencode` and `opencode.json` only.</div>
+                    <div class="mt-1 text-sm text-gray-12">Use an existing worker config.</div>
+                    <div class="text-xs text-gray-10">Imports `.maya` and `maya.json` only.</div>
                   </div>
                   <Button
                     variant="secondary"
@@ -367,9 +364,9 @@ export default function OnboardingView(props: OnboardingViewProps) {
                         </div>
                         <Show when={isWindowsPlatform()}>
                           <div class="text-xs text-gray-10 space-y-1 font-mono">
-                            <div>choco install opencode</div>
-                            <div>scoop install extras/opencode</div>
-                            <div>npm install -g opencode-ai</div>
+                            <div>choco install maya</div>
+                            <div>scoop install extras/maya</div>
+                            <div>npm install -g maya-ai</div>
                           </div>
                         </Show>
                         <div class="flex gap-2 pt-2">
@@ -457,11 +454,10 @@ export default function OnboardingView(props: OnboardingViewProps) {
                 <Show when={props.migrationRepairResult}>
                   {(result) => (
                     <div
-                      class={`rounded-xl border px-3 py-2 text-xs ${
-                        result().ok
+                      class={`rounded-xl border px-3 py-2 text-xs ${result().ok
                           ? "border-green-7/30 bg-green-2/30 text-green-12"
                           : "border-red-7/30 bg-red-2/30 text-red-12"
-                      }`}
+                        }`}
                     >
                       {result().message}
                     </div>
@@ -496,13 +492,13 @@ export default function OnboardingView(props: OnboardingViewProps) {
           <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-2 to-transparent opacity-20 pointer-events-none" />
 
           <div class="max-w-md w-full z-10 space-y-8">
-              <div class="text-center space-y-2">
-                <div class="w-12 h-12 bg-gray-2 rounded-2xl mx-auto flex items-center justify-center border border-gray-6 mb-6">
-                  <Globe size={20} class="text-gray-11" />
-                </div>
-                <h2 class="text-2xl font-bold tracking-tight">{translate("onboarding.remote_workspace_title")}</h2>
+            <div class="text-center space-y-2">
+              <div class="w-12 h-12 bg-gray-2 rounded-2xl mx-auto flex items-center justify-center border border-gray-6 mb-6">
+                <Globe size={20} class="text-gray-11" />
+              </div>
+              <h2 class="text-2xl font-bold tracking-tight">{translate("onboarding.remote_workspace_title")}</h2>
               <p class="text-gray-11 text-sm leading-relaxed">
-                  {translate("onboarding.remote_workspace_description")}
+                {translate("onboarding.remote_workspace_description")}
               </p>
             </div>
 
@@ -516,20 +512,20 @@ export default function OnboardingView(props: OnboardingViewProps) {
 
               <div class="space-y-4">
                 <TextInput
-                  label={translate("dashboard.openwork_host_label")}
-                  placeholder={translate("dashboard.openwork_host_placeholder")}
-                  value={props.openworkHostUrl}
+                  label={translate("dashboard.maya_host_label")}
+                  placeholder={translate("dashboard.maya_host_placeholder")}
+                  value={props.mayaHostUrl}
                   onInput={(e) => props.onOpenworkHostUrlChange(e.currentTarget.value)}
-                  hint={translate("dashboard.openwork_host_hint")}
+                  hint={translate("dashboard.maya_host_hint")}
                 />
                 <label class="block">
-                  <div class="mb-1 text-xs font-medium text-gray-11">{translate("dashboard.openwork_host_token_label")}</div>
+                  <div class="mb-1 text-xs font-medium text-gray-11">{translate("dashboard.maya_host_token_label")}</div>
                   <div class="flex items-center gap-2">
                     <input
-                      type={openworkTokenVisible() ? "text" : "password"}
-                      value={props.openworkToken}
+                      type={mayaTokenVisible() ? "text" : "password"}
+                      value={props.mayaToken}
                       onInput={(e) => props.onOpenworkTokenChange(e.currentTarget.value)}
-                      placeholder={translate("dashboard.openwork_host_token_placeholder")}
+                      placeholder={translate("dashboard.maya_host_token_placeholder")}
                       disabled={props.busy}
                       class="w-full rounded-xl bg-gray-2/60 px-3 py-2 text-sm text-gray-12 placeholder:text-gray-10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] focus:outline-none focus:ring-2 focus:ring-gray-6/20"
                     />
@@ -539,10 +535,10 @@ export default function OnboardingView(props: OnboardingViewProps) {
                       onClick={() => setOpenworkTokenVisible((prev) => !prev)}
                       disabled={props.busy}
                     >
-                      {openworkTokenVisible() ? translate("common.hide") : translate("common.show")}
+                      {mayaTokenVisible() ? translate("common.hide") : translate("common.show")}
                     </Button>
                   </div>
-                  <div class="mt-1 text-xs text-gray-10">{translate("dashboard.openwork_host_token_hint")}</div>
+                  <div class="mt-1 text-xs text-gray-10">{translate("dashboard.maya_host_token_hint")}</div>
                 </label>
                 <TextInput
                   label={translate("dashboard.remote_directory_label")}
@@ -555,7 +551,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
 
               <Button
                 onClick={props.onConnectClient}
-                disabled={props.busy || !props.openworkHostUrl.trim()}
+                disabled={props.busy || !props.mayaHostUrl.trim()}
                 class="w-full py-3 text-base"
               >
                 {translate("onboarding.remote_workspace_action")}
@@ -592,9 +588,9 @@ export default function OnboardingView(props: OnboardingViewProps) {
             <div class="text-center space-y-4">
               <div class="flex items-center justify-center gap-3 mb-6">
                 <div class="">
-                  <OpenWorkLogo size={48} />
+                  <MAYALogo size={48} />
                 </div>
-                <h1 class="text-3xl font-bold tracking-tight text-gray-12">OpenWork</h1>
+                <h1 class="text-3xl font-bold tracking-tight text-gray-12">MAYA</h1>
               </div>
               <h2 class="text-xl text-gray-11">{translate("onboarding.welcome_title")}</h2>
             </div>
@@ -610,7 +606,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
                 <div>
                   <h3 class="text-xl font-medium text-gray-12 mb-2">{translate("onboarding.run_local")}</h3>
                   <p class="text-gray-10 text-sm leading-relaxed mb-4">
-                      {translate("onboarding.run_local_description")}
+                    {translate("onboarding.run_local_description")}
                   </p>
                   <Show when={props.developerMode}>
                     <div class="flex items-center gap-2 text-xs font-mono text-indigo-11/80 bg-indigo-2/10 w-fit px-2 py-1 rounded border border-indigo-7/10">
@@ -661,11 +657,10 @@ export default function OnboardingView(props: OnboardingViewProps) {
                   class="flex items-center gap-2 text-xs text-gray-10 hover:text-gray-11 transition-colors group"
                 >
                   <div
-                    class={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                      props.rememberStartupChoice
+                    class={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${props.rememberStartupChoice
                         ? "bg-indigo-7 border-indigo-7 text-gray-12"
                         : "border-gray-7 bg-transparent group-hover:border-gray-7"
-                    }`}
+                      }`}
                   >
                     <Show when={props.rememberStartupChoice}>
                       <CheckCircle2 size={10} />

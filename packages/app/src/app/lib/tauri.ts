@@ -5,7 +5,7 @@ import { validateMcpServerName } from "../mcp";
 
 export type EngineInfo = {
   running: boolean;
-  runtime: "direct" | "openwork-orchestrator";
+  runtime: "direct" | "maya-orchestrator";
   baseUrl: string | null;
   projectDir: string | null;
   hostname: string | null;
@@ -110,14 +110,14 @@ export type WorkspaceInfo = {
   path: string;
   preset: string;
   workspaceType: "local" | "remote";
-  remoteType?: "openwork" | "opencode" | null;
+  remoteType?: "maya" | "opencode" | null;
   baseUrl?: string | null;
   directory?: string | null;
   displayName?: string | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  mayaHostUrl?: string | null;
+  mayaToken?: string | null;
+  mayaWorkspaceId?: string | null;
+  mayaWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | null;
@@ -140,7 +140,7 @@ export async function engineStart(
   projectDir: string,
   options?: {
     preferSidecar?: boolean;
-    runtime?: "direct" | "openwork-orchestrator";
+    runtime?: "direct" | "maya-orchestrator";
     workspacePaths?: string[];
     opencodeBinPath?: string | null;
   },
@@ -178,11 +178,11 @@ export async function workspaceCreateRemote(input: {
   baseUrl: string;
   directory?: string | null;
   displayName?: string | null;
-  remoteType?: "openwork" | "opencode" | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  remoteType?: "maya" | "opencode" | null;
+  mayaHostUrl?: string | null;
+  mayaToken?: string | null;
+  mayaWorkspaceId?: string | null;
+  mayaWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | null;
@@ -194,10 +194,10 @@ export async function workspaceCreateRemote(input: {
     directory: input.directory ?? null,
     displayName: input.displayName ?? null,
     remoteType: input.remoteType ?? null,
-    openworkHostUrl: input.openworkHostUrl ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-    openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+    mayaHostUrl: input.mayaHostUrl ?? null,
+    mayaToken: input.mayaToken ?? null,
+    mayaWorkspaceId: input.mayaWorkspaceId ?? null,
+    mayaWorkspaceName: input.mayaWorkspaceName ?? null,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxRunId: input.sandboxRunId ?? null,
     sandboxContainerName: input.sandboxContainerName ?? null,
@@ -209,11 +209,11 @@ export async function workspaceUpdateRemote(input: {
   baseUrl?: string | null;
   directory?: string | null;
   displayName?: string | null;
-  remoteType?: "openwork" | "opencode" | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  remoteType?: "maya" | "opencode" | null;
+  mayaHostUrl?: string | null;
+  mayaToken?: string | null;
+  mayaWorkspaceId?: string | null;
+  mayaWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | null;
@@ -226,10 +226,10 @@ export async function workspaceUpdateRemote(input: {
     directory: input.directory ?? null,
     displayName: input.displayName ?? null,
     remoteType: input.remoteType ?? null,
-    openworkHostUrl: input.openworkHostUrl ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-    openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+    mayaHostUrl: input.mayaHostUrl ?? null,
+    mayaToken: input.mayaToken ?? null,
+    mayaWorkspaceId: input.mayaWorkspaceId ?? null,
+    mayaWorkspaceName: input.mayaWorkspaceName ?? null,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxRunId: input.sandboxRunId ?? null,
     sandboxContainerName: input.sandboxContainerName ?? null,
@@ -308,7 +308,7 @@ export type WorkspaceOpenworkConfig = {
 export async function workspaceOpenworkRead(input: {
   workspacePath: string;
 }): Promise<WorkspaceOpenworkConfig> {
-  return invoke<WorkspaceOpenworkConfig>("workspace_openwork_read", {
+  return invoke<WorkspaceOpenworkConfig>("workspace_maya_read", {
     workspacePath: input.workspacePath,
   });
 }
@@ -317,7 +317,7 @@ export async function workspaceOpenworkWrite(input: {
   workspacePath: string;
   config: WorkspaceOpenworkConfig;
 }): Promise<ExecResult> {
-  return invoke<ExecResult>("workspace_openwork_write", {
+  return invoke<ExecResult>("workspace_maya_write", {
     workspacePath: input.workspacePath,
     config: input.config,
   });
@@ -394,7 +394,7 @@ export async function appBuildInfo(): Promise<AppBuildInfo> {
 }
 
 export type OrchestratorDetachedHost = {
-  openworkUrl: string;
+  mayaUrl: string;
   token: string;
   hostToken: string;
   port: number;
@@ -407,15 +407,15 @@ export async function orchestratorStartDetached(input: {
   workspacePath: string;
   sandboxBackend?: "none" | "docker" | null;
   runId?: string | null;
-  openworkToken?: string | null;
-  openworkHostToken?: string | null;
+  mayaToken?: string | null;
+  mayaHostToken?: string | null;
 }): Promise<OrchestratorDetachedHost> {
   return invoke<OrchestratorDetachedHost>("orchestrator_start_detached", {
     workspacePath: input.workspacePath,
     sandboxBackend: input.sandboxBackend ?? null,
     runId: input.runId ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkHostToken: input.openworkHostToken ?? null,
+    mayaToken: input.mayaToken ?? null,
+    mayaHostToken: input.mayaHostToken ?? null,
   });
 }
 
@@ -458,7 +458,7 @@ export type OpenworkDockerCleanupResult = {
 };
 
 export async function sandboxCleanupOpenworkContainers(): Promise<OpenworkDockerCleanupResult> {
-  return invoke<OpenworkDockerCleanupResult>("sandbox_cleanup_openwork_containers");
+  return invoke<OpenworkDockerCleanupResult>("sandbox_cleanup_maya_containers");
 }
 
 export type SandboxDebugProbeResult = {
@@ -497,12 +497,12 @@ export async function sandboxDebugProbe(): Promise<SandboxDebugProbeResult> {
   return invoke<SandboxDebugProbeResult>("sandbox_debug_probe");
 }
 
-export async function openworkServerInfo(): Promise<OpenworkServerInfo> {
-  return invoke<OpenworkServerInfo>("openwork_server_info");
+export async function mayaServerInfo(): Promise<OpenworkServerInfo> {
+  return invoke<OpenworkServerInfo>("maya_server_info");
 }
 
-export async function openworkServerRestart(): Promise<OpenworkServerInfo> {
-  return invoke<OpenworkServerInfo>("openwork_server_restart");
+export async function mayaServerRestart(): Promise<OpenworkServerInfo> {
+  return invoke<OpenworkServerInfo>("maya_server_restart");
 }
 
 export async function engineInfo(): Promise<EngineInfo> {
@@ -702,7 +702,7 @@ export async function writeOpencodeConfig(
 }
 
 export async function resetOpenworkState(mode: "onboarding" | "all"): Promise<void> {
-  return invoke<void>("reset_openwork_state", { mode });
+  return invoke<void>("reset_maya_state", { mode });
 }
 
 export type CacheResetResult = {

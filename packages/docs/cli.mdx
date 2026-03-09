@@ -1,14 +1,14 @@
 ---
 title: "CLI"
-description: "Run OpenWork with openwrk and related CLIs"
+description: "Run MAYA with openwrk and related CLIs"
 ---
 
 Use the CLI stack when you want automation without the desktop app.
 
 ## Main commands
 
-- `openwrk`: headless orchestrator (OpenCode + OpenWork server + router)
-- `openwork-server`: filesystem-backed remote API server
+- `openwrk`: headless orchestrator (OpenCode + MAYA server + router)
+- `maya-server`: filesystem-backed remote API server
 - `opencode-router`: Slack/Telegram bridge with directory routing
 
 ## openwrk (recommended)
@@ -21,15 +21,15 @@ openwrk start --workspace /path/to/workspace --approval auto
 Useful follow-ups:
 
 ```bash
-openwrk status --openwork-url http://127.0.0.1:8787 --opencode-url http://127.0.0.1:4096
-openwrk approvals list --openwork-url http://127.0.0.1:8787 --host-token <token>
+openwrk status --maya-url http://127.0.0.1:8787 --opencode-url http://127.0.0.1:4096
+openwrk approvals list --maya-url http://127.0.0.1:8787 --host-token <token>
 ```
 
-## openwork-server
+## maya-server
 
 ```bash
-npm install -g openwork-server
-openwork-server --workspace /path/to/workspace --approval auto
+npm install -g maya-server
+maya-server --workspace /path/to/workspace --approval auto
 ```
 
 Key env vars:

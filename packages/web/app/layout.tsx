@@ -17,9 +17,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenWork Cloud",
+  title: "MAYA Cloud",
   description:
-    "Launch OpenWork cloud workers, handle Polar paywall flows, and operate Den from app.openwork.software."
+    "Launch MAYA cloud workers, handle Polar paywall flows, and operate Den from app.maya.software."
 };
 
 const posthogKey =

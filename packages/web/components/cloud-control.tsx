@@ -63,7 +63,7 @@ type WorkerLaunch = {
   status: string;
   provider: string | null;
   instanceUrl: string | null;
-  openworkUrl: string | null;
+  mayaUrl: string | null;
   workspaceId: string | null;
   clientToken: string | null;
   hostToken: string | null;
@@ -81,7 +81,7 @@ type WorkerSummary = {
 type WorkerTokens = {
   clientToken: string | null;
   hostToken: string | null;
-  openworkUrl: string | null;
+  mayaUrl: string | null;
   workspaceId: string | null;
 };
 
@@ -130,13 +130,13 @@ function getAuthInfoForMode(mode: AuthMode): string {
     : "Sign in to launch and manage cloud workers.";
 }
 
-const LAST_WORKER_STORAGE_KEY = "openwork:web:last-worker";
-const PENDING_GITHUB_SIGNUP_STORAGE_KEY = "openwork:web:pending-github-signup";
-const AUTH_TOKEN_STORAGE_KEY = "openwork:web:auth-token";
+const LAST_WORKER_STORAGE_KEY = "maya:web:last-worker";
+const PENDING_GITHUB_SIGNUP_STORAGE_KEY = "maya:web:pending-github-signup";
+const AUTH_TOKEN_STORAGE_KEY = "maya:web:auth-token";
 const WORKER_STATUS_POLL_MS = 5000;
-const DEFAULT_AUTH_NAME = "OpenWork User";
+const DEFAULT_AUTH_NAME = "MAYA User";
 const OPENWORK_APP_CONNECT_BASE_URL = (process.env.NEXT_PUBLIC_OPENWORK_APP_CONNECT_URL ?? "").trim();
-const OPENWORK_AUTH_CALLBACK_BASE_URL = (process.env.NEXT_PUBLIC_OPENWORK_AUTH_CALLBACK_URL ?? "https://app.openwork.software").trim();
+const OPENWORK_AUTH_CALLBACK_BASE_URL = (process.env.NEXT_PUBLIC_OPENWORK_AUTH_CALLBACK_URL ?? "https://app.maya.software").trim();
 
 function getEmailDomain(email: string): string {
   const atIndex = email.lastIndexOf("@");
@@ -206,9 +206,9 @@ async function trackDenSignupInLoops(payload: DenSignupTrackPayload) {
 
 function getGithubCallbackUrl(): string {
   try {
-    return new URL("/", OPENWORK_AUTH_CALLBACK_BASE_URL || "https://app.openwork.software").toString();
+    return new URL("/", OPENWORK_AUTH_CALLBACK_BASE_URL || "https://app.maya.software").toString();
   } catch {
-    return "https://app.openwork.software/";
+    return "https://app.maya.software/";
   }
 }
 
@@ -365,7 +365,7 @@ function getWorker(payload: unknown): WorkerLaunch | null {
     status: typeof worker.status === "string" ? worker.status : "unknown",
     provider: instance && typeof instance.provider === "string" ? instance.provider : null,
     instanceUrl: instance && typeof instance.url === "string" ? instance.url : null,
-    openworkUrl: instance && typeof instance.url === "string" ? instance.url : null,
+    mayaUrl: instance && typeof instance.url === "string" ? instance.url : null,
     workspaceId: null,
     clientToken: tokens && typeof tokens.client === "string" ? tokens.client : null,
     hostToken: tokens && typeof tokens.host === "string" ? tokens.host : null
@@ -403,14 +403,14 @@ function getWorkerTokens(payload: unknown): WorkerTokens | null {
   const connect = isRecord(payload.connect) ? payload.connect : null;
   const clientToken = typeof tokens.client === "string" ? tokens.client : null;
   const hostToken = typeof tokens.host === "string" ? tokens.host : null;
-  const openworkUrl = connect && typeof connect.openworkUrl === "string" ? connect.openworkUrl : null;
+  const mayaUrl = connect && typeof connect.mayaUrl === "string" ? connect.mayaUrl : null;
   const workspaceId = connect && typeof connect.workspaceId === "string" ? connect.workspaceId : null;
 
   if (!clientToken && !hostToken) {
     return null;
   }
 
-  return { clientToken, hostToken, openworkUrl, workspaceId };
+  return { clientToken, hostToken, mayaUrl, workspaceId };
 }
 
 function getBillingPrice(value: unknown): BillingPrice | null {
@@ -599,7 +599,7 @@ function isWorkerLaunch(value: unknown): value is WorkerLaunch {
     typeof value.status === "string" &&
     (typeof value.provider === "string" || value.provider === null) &&
     (typeof value.instanceUrl === "string" || value.instanceUrl === null) &&
-    (typeof value.openworkUrl === "string" || value.openworkUrl === null || typeof value.openworkUrl === "undefined") &&
+    (typeof value.mayaUrl === "string" || value.mayaUrl === null || typeof value.mayaUrl === "undefined") &&
     (typeof value.workspaceId === "string" || value.workspaceId === null || typeof value.workspaceId === "undefined") &&
     (typeof value.clientToken === "string" || value.clientToken === null) &&
     (typeof value.hostToken === "string" || value.hostToken === null)
@@ -613,7 +613,7 @@ function listItemToWorker(item: WorkerListItem, current: WorkerLaunch | null = n
     status: item.status,
     provider: item.provider,
     instanceUrl: item.instanceUrl,
-    openworkUrl: item.instanceUrl,
+    mayaUrl: item.instanceUrl,
     workspaceId: null,
     clientToken: current?.workerId === item.workerId ? current.clientToken : null,
     hostToken: current?.workerId === item.workerId ? current.hostToken : null
@@ -657,19 +657,19 @@ function buildWorkspaceUrl(instanceUrl: string, workspaceId: string): string {
 }
 
 function buildOpenworkDeepLink(
-  openworkUrl: string | null,
+  mayaUrl: string | null,
   accessToken: string | null,
   workerId: string | null,
   workerName: string | null,
 ): string | null {
-  if (!openworkUrl || !accessToken) {
+  if (!mayaUrl || !accessToken) {
     return null;
   }
 
   const params = new URLSearchParams({
-    openworkHostUrl: openworkUrl,
-    openworkToken: accessToken,
-    source: "openwork-web"
+    mayaHostUrl: mayaUrl,
+    mayaToken: accessToken,
+    source: "maya-web"
   });
 
   if (workerId) {
@@ -680,17 +680,17 @@ function buildOpenworkDeepLink(
     params.set("workerName", workerName);
   }
 
-  return `openwork://connect-remote?${params.toString()}`;
+  return `maya://connect-remote?${params.toString()}`;
 }
 
 function buildOpenworkAppConnectUrl(
   appConnectBaseUrl: string,
-  openworkUrl: string | null,
+  mayaUrl: string | null,
   accessToken: string | null,
   workerId: string | null,
   workerName: string | null,
 ): string | null {
-  if (!appConnectBaseUrl || !openworkUrl || !accessToken) {
+  if (!appConnectBaseUrl || !mayaUrl || !accessToken) {
     return null;
   }
 
@@ -711,9 +711,9 @@ function buildOpenworkAppConnectUrl(
       lastSegment === "connect-remote" ? normalizedPath : `${normalizedPath}/connect-remote`;
   }
 
-  connectUrl.searchParams.set("openworkHostUrl", openworkUrl);
-  connectUrl.searchParams.set("openworkToken", accessToken);
-  connectUrl.searchParams.set("source", "openwork-web");
+  connectUrl.searchParams.set("mayaHostUrl", mayaUrl);
+  connectUrl.searchParams.set("mayaToken", accessToken);
+  connectUrl.searchParams.set("source", "maya-web");
 
   if (workerId) {
     connectUrl.searchParams.set("workerId", workerId);
@@ -784,7 +784,7 @@ async function requestAbsoluteJson(url: string, init: RequestInit = {}, timeoutM
   return { response, payload };
 }
 
-async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessToken: string): Promise<{ workspaceId: string; openworkUrl: string } | null> {
+async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessToken: string): Promise<{ workspaceId: string; mayaUrl: string } | null> {
   const baseUrl = normalizeUrl(instanceUrl);
   const token = accessToken.trim();
   if (!baseUrl || !token) {
@@ -795,7 +795,7 @@ async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessToken: str
   if (mountedWorkspaceId) {
     return {
       workspaceId: mountedWorkspaceId,
-      openworkUrl: baseUrl
+      mayaUrl: baseUrl
     };
   }
 
@@ -817,7 +817,7 @@ async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessToken: str
 
   return {
     workspaceId,
-    openworkUrl: buildWorkspaceUrl(baseUrl, workspaceId)
+    mayaUrl: buildWorkspaceUrl(baseUrl, workspaceId)
   };
 }
 
@@ -965,17 +965,17 @@ export function CloudControlPanel() {
 
   const progressWidth = step === 1 ? "45%" : "100%";
   const isShellStep = step === 2;
-  const openworkConnectUrl = activeWorker?.openworkUrl ?? activeWorker?.instanceUrl ?? null;
-  const hasWorkspaceScopedUrl = Boolean(openworkConnectUrl && /\/w\/[^/?#]+/.test(openworkConnectUrl));
-  const openworkDeepLink = buildOpenworkDeepLink(
-    openworkConnectUrl,
+  const mayaConnectUrl = activeWorker?.mayaUrl ?? activeWorker?.instanceUrl ?? null;
+  const hasWorkspaceScopedUrl = Boolean(mayaConnectUrl && /\/w\/[^/?#]+/.test(mayaConnectUrl));
+  const mayaDeepLink = buildOpenworkDeepLink(
+    mayaConnectUrl,
     activeWorker?.clientToken ?? null,
     activeWorker?.workerId ?? null,
     activeWorker?.workerName ?? null,
   );
-  const openworkAppConnectUrl = buildOpenworkAppConnectUrl(
+  const mayaAppConnectUrl = buildOpenworkAppConnectUrl(
     OPENWORK_APP_CONNECT_BASE_URL,
-    openworkConnectUrl,
+    mayaConnectUrl,
     activeWorker?.clientToken ?? null,
     activeWorker?.workerId ?? null,
     activeWorker?.workerName ?? null,
@@ -1023,12 +1023,12 @@ export function CloudControlPanel() {
   }
 
   async function withResolvedOpenworkCredentials(candidate: WorkerLaunch, options: { quiet?: boolean } = {}) {
-    const existingConnectUrl = candidate.openworkUrl?.trim() ?? "";
+    const existingConnectUrl = candidate.mayaUrl?.trim() ?? "";
     const existingWorkspaceId = candidate.workspaceId?.trim() ?? "";
     if (existingConnectUrl && existingWorkspaceId) {
       return {
         ...candidate,
-        openworkUrl: existingConnectUrl,
+        mayaUrl: existingConnectUrl,
         workspaceId: existingWorkspaceId
       };
     }
@@ -1037,7 +1037,7 @@ export function CloudControlPanel() {
     if (!instanceUrl) {
       return {
         ...candidate,
-        openworkUrl: null,
+        mayaUrl: null,
         workspaceId: null
       };
     }
@@ -1047,7 +1047,7 @@ export function CloudControlPanel() {
       const mountedWorkspaceId = parseWorkspaceIdFromUrl(instanceUrl);
       return {
         ...candidate,
-        openworkUrl: normalizeUrl(instanceUrl),
+        mayaUrl: normalizeUrl(instanceUrl),
         workspaceId: mountedWorkspaceId
       };
     }
@@ -1057,7 +1057,7 @@ export function CloudControlPanel() {
       if (resolved) {
         return {
           ...candidate,
-          openworkUrl: resolved.openworkUrl,
+          mayaUrl: resolved.mayaUrl,
           workspaceId: resolved.workspaceId
         };
       }
@@ -1069,7 +1069,7 @@ export function CloudControlPanel() {
 
     return {
       ...candidate,
-      openworkUrl: normalizeUrl(instanceUrl),
+      mayaUrl: normalizeUrl(instanceUrl),
       workspaceId: parseWorkspaceIdFromUrl(instanceUrl)
     };
   }
@@ -1414,7 +1414,7 @@ export function CloudControlPanel() {
 
       const restored: WorkerLaunch = {
         ...parsed,
-        openworkUrl: parsed.openworkUrl ?? parsed.instanceUrl,
+        mayaUrl: parsed.mayaUrl ?? parsed.instanceUrl,
         workspaceId: parsed.workspaceId ?? parseWorkspaceIdFromUrl(parsed.instanceUrl ?? ""),
         clientToken: null,
         hostToken: null
@@ -1938,7 +1938,7 @@ export function CloudControlPanel() {
               status: summary.status,
               provider: summary.provider,
               instanceUrl: summary.instanceUrl,
-              openworkUrl: summary.instanceUrl,
+              mayaUrl: summary.instanceUrl,
               workspaceId: null,
               clientToken: null,
               hostToken: null
@@ -2022,7 +2022,7 @@ export function CloudControlPanel() {
         worker && worker.workerId === id
           ? {
               ...worker,
-              openworkUrl: tokens.openworkUrl ?? worker.openworkUrl,
+              mayaUrl: tokens.mayaUrl ?? worker.mayaUrl,
               workspaceId: tokens.workspaceId ?? worker.workspaceId,
               clientToken: tokens.clientToken,
               hostToken: tokens.hostToken
@@ -2033,7 +2033,7 @@ export function CloudControlPanel() {
               status: "unknown",
               provider: null,
               instanceUrl: null,
-              openworkUrl: tokens.openworkUrl,
+              mayaUrl: tokens.mayaUrl,
               workspaceId: tokens.workspaceId,
               clientToken: tokens.clientToken,
               hostToken: tokens.hostToken
@@ -2442,7 +2442,7 @@ export function CloudControlPanel() {
                             </div>
                             <div className="rounded-[20px] border border-slate-100 bg-white p-4">
                               <p className="text-sm font-medium text-slate-500">Connection</p>
-                              <p className="mt-2 text-2xl font-bold text-slate-900">{openworkDeepLink ? "Ready" : "Preparing"}</p>
+                              <p className="mt-2 text-2xl font-bold text-slate-900">{mayaDeepLink ? "Ready" : "Preparing"}</p>
                             </div>
                           </div>
                         </div>
@@ -2459,19 +2459,19 @@ export function CloudControlPanel() {
                                 type="button"
                                 className="rounded-[14px] bg-[#1B29FF] px-6 py-3 text-sm font-semibold text-white shadow-md shadow-[#1B29FF]/25 transition hover:bg-[#151FDA] disabled:cursor-not-allowed disabled:opacity-60"
                                 onClick={() => {
-                                  if (!openworkDeepLink) {
+                                  if (!mayaDeepLink) {
                                     return;
                                   }
-                                  window.location.href = openworkDeepLink;
+                                  window.location.href = mayaDeepLink;
                                 }}
-                                disabled={!openworkDeepLink || selectedStatusMeta.bucket !== "ready"}
+                                disabled={!mayaDeepLink || selectedStatusMeta.bucket !== "ready"}
                               >
-                                {openworkDeepLink ? "Open in OpenWork" : "Preparing connection..."}
+                                {mayaDeepLink ? "Open in MAYA" : "Preparing connection..."}
                               </button>
 
-                              {openworkAppConnectUrl ? (
+                              {mayaAppConnectUrl ? (
                                 <a
-                                  href={openworkAppConnectUrl}
+                                  href={mayaAppConnectUrl}
                                   target="_blank"
                                   rel="noreferrer"
                                   className={`rounded-[14px] border px-5 py-3 text-sm font-semibold transition ${
@@ -2489,10 +2489,10 @@ export function CloudControlPanel() {
 
                           <div className="rounded-[14px] border border-slate-100 bg-slate-50 px-4 py-3">
                             <p className="text-sm text-slate-600">
-                              {openworkDeepLink
-                                ? openworkAppConnectUrl
-                                  ? "You are all set. Open in OpenWork or Open in App to start working."
-                                  : "You are all set. Open in OpenWork to start working."
+                              {mayaDeepLink
+                                ? mayaAppConnectUrl
+                                  ? "You are all set. Open in MAYA or Open in App to start working."
+                                  : "You are all set. Open in MAYA to start working."
                                 : "We are still preparing your connection. The button will unlock when ready."}
                             </p>
                           </div>
@@ -2520,24 +2520,24 @@ export function CloudControlPanel() {
                                   <input
                                     type="text"
                                     readOnly
-                                    value={openworkConnectUrl ?? "Connection URL is still preparing..."}
+                                    value={mayaConnectUrl ?? "Connection URL is still preparing..."}
                                     className="w-full flex-1 bg-transparent px-3 py-2 font-mono text-xs text-slate-600 outline-none"
                                     onClick={(event) => event.currentTarget.select()}
                                   />
                                   <button
                                     type="button"
                                     className="rounded-xl border border-transparent bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:border-slate-200 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={!openworkConnectUrl}
-                                    onClick={() => void copyToClipboard("openwork-url", openworkConnectUrl)}
+                                    disabled={!mayaConnectUrl}
+                                    onClick={() => void copyToClipboard("maya-url", mayaConnectUrl)}
                                   >
-                                    {copiedField === "openwork-url" ? "Copied" : "Copy"}
+                                    {copiedField === "maya-url" ? "Copied" : "Copy"}
                                   </button>
                                 </div>
-                                {!openworkDeepLink || !openworkConnectUrl || (!hasWorkspaceScopedUrl && openworkConnectUrl) ? (
+                                {!mayaDeepLink || !mayaConnectUrl || (!hasWorkspaceScopedUrl && mayaConnectUrl) ? (
                                   <p className="mt-2 text-xs text-slate-500">
-                                    {!openworkDeepLink
+                                    {!mayaDeepLink
                                       ? "Getting connection details ready..."
-                                      : !openworkConnectUrl
+                                      : !mayaConnectUrl
                                         ? "Keep this page open for a moment."
                                         : "Finishing your workspace URL..."}
                                   </p>
@@ -2557,12 +2557,12 @@ export function CloudControlPanel() {
                                   {openAccordion === "connect" ? (
                                     <div className="space-y-3 px-4 pb-4">
                                       <CredentialRow
-                                        label="OpenWork worker URL"
-                                        value={openworkConnectUrl}
+                                        label="MAYA worker URL"
+                                        value={mayaConnectUrl}
                                         placeholder="URL appears once ready"
-                                        canCopy={Boolean(openworkConnectUrl)}
-                                        copied={copiedField === "manual-openwork-url"}
-                                        onCopy={() => void copyToClipboard("manual-openwork-url", openworkConnectUrl)}
+                                        canCopy={Boolean(mayaConnectUrl)}
+                                        copied={copiedField === "manual-maya-url"}
+                                        onCopy={() => void copyToClipboard("manual-maya-url", mayaConnectUrl)}
                                       />
 
                                       <CredentialRow

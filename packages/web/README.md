@@ -1,34 +1,34 @@
-# OpenWork Cloud App (`packages/web`)
+# MAYA Cloud App (`packages/web`)
 
-Frontend for `app.openwork.software`.
+Frontend for `app.maya.software`.
 
 ## What it does
 
 - Signs up / signs in users against Den service auth.
 - Launches cloud workers via `POST /v1/workers`.
 - Handles paywall responses (`402 payment_required`) and shows Polar checkout links.
-- Uses a Next.js proxy route (`/api/den/*`) to reach `api.openwork.software` without browser CORS issues.
+- Uses a Next.js proxy route (`/api/den/*`) to reach `api.maya.software` without browser CORS issues.
 
 ## Local development
 
 1. Install workspace deps from repo root:
    `pnpm install`
 2. Run the app:
-   `pnpm --filter @different-ai/openwork-web dev`
+   `pnpm --filter @different-ai/maya-web dev`
 3. Open:
    `http://localhost:3005`
 
 ### Optional env vars
 
 - `DEN_API_BASE` (server-only): upstream API base used by proxy route.
-  - default: `https://api.openwork.software`
+  - default: `https://api.maya.software`
 - `DEN_AUTH_ORIGIN` (server-only): Origin header sent to Better Auth endpoints.
-  - default: `https://den-control-plane-openwork.onrender.com`
+  - default: `https://den-control-plane-maya.onrender.com`
 - `NEXT_PUBLIC_OPENWORK_APP_CONNECT_URL` (client): Base URL for "Open in App" links.
-  - Example: `https://openwork.software/app`
+  - Example: `https://maya.software/app`
   - The web panel appends `/connect-remote` and injects worker URL/token params automatically.
 - `NEXT_PUBLIC_OPENWORK_AUTH_CALLBACK_URL` (client): Canonical URL used for GitHub auth callback redirects.
-  - default: `https://app.openwork.software`
+  - default: `https://app.maya.software`
 - `NEXT_PUBLIC_POSTHOG_KEY` (client): PostHog project key used for Den analytics.
   - set this to the same project key used by `packages/landing`
 - `NEXT_PUBLIC_POSTHOG_HOST` (client): PostHog host URL.
@@ -47,4 +47,4 @@ Recommended project settings:
 
 Then assign custom domain:
 
-- `app.openwork.software`
+- `app.maya.software`

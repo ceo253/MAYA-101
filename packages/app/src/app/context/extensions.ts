@@ -29,7 +29,7 @@ import type {
   OpenworkServerCapabilities,
   OpenworkServerClient,
   OpenworkServerStatus,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 
 export type ExtensionsStore = ReturnType<typeof createExtensionsStore>;
 
@@ -38,10 +38,10 @@ export function createExtensionsStore(options: {
   projectDir: () => string;
   activeWorkspaceRoot: () => string;
   workspaceType: () => "local" | "remote";
-  openworkServerClient: () => OpenworkServerClient | null;
-  openworkServerStatus: () => OpenworkServerStatus;
-  openworkServerCapabilities: () => OpenworkServerCapabilities | null;
-  openworkServerWorkspaceId: () => string | null;
+  mayaServerClient: () => OpenworkServerClient | null;
+  mayaServerStatus: () => OpenworkServerStatus;
+  mayaServerCapabilities: () => OpenworkServerCapabilities | null;
+  mayaServerWorkspaceId: () => string | null;
   setBusy: (value: boolean) => void;
   setBusyLabel: (value: string | null) => void;
   setBusyStartedAt: (value: number | null) => void;
@@ -85,13 +85,13 @@ export function createExtensionsStore(options: {
 
   async function refreshHubSkills(optionsOverride?: { force?: boolean }) {
     const root = options.activeWorkspaceRoot().trim();
-    const openworkClient = options.openworkServerClient();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkCapabilities?.hub?.skills?.read &&
-      typeof (openworkClient as any).listHubSkills === "function";
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaCapabilities?.hub?.skills?.read &&
+      typeof (mayaClient as any).listHubSkills === "function";
 
     if (root !== hubSkillsRoot) {
       hubSkillsLoaded = false;
@@ -107,7 +107,7 @@ export function createExtensionsStore(options: {
       setHubSkillsStatus(null);
 
       if (canUseOpenworkServer) {
-        const response = await (openworkClient as any).listHubSkills();
+        const response = await (mayaClient as any).listHubSkills();
         if (refreshHubSkillsAborted) return;
         const next: HubSkillCard[] = Array.isArray(response?.items)
           ? response.items.map((entry: any) => ({
@@ -125,7 +125,7 @@ export function createExtensionsStore(options: {
       }
 
       // Browser fallback: fetch directly from GitHub (public catalog).
-      const listingRes = await fetch("https://api.github.com/repos/different-ai/openwork-hub/contents/skills?ref=main", {
+      const listingRes = await fetch("https://api.github.com/repos/different-ai/maya-hub/contents/skills?ref=main", {
         headers: { Accept: "application/vnd.github+json" },
       });
       if (!listingRes.ok) {
@@ -140,7 +140,7 @@ export function createExtensionsStore(options: {
 
       const next: HubSkillCard[] = dirs.map((dirName) => ({
         name: dirName,
-        source: { owner: "different-ai", repo: "openwork-hub", ref: "main", path: `skills/${dirName}` },
+        source: { owner: "different-ai", repo: "maya-hub", ref: "main", path: `skills/${dirName}` },
       }));
 
       if (refreshHubSkillsAborted) return;
@@ -163,21 +163,21 @@ export function createExtensionsStore(options: {
     if (!trimmed) return { ok: false, message: "Skill name is required." };
 
     const isRemoteWorkspace = options.workspaceType() === "remote";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.hub?.skills?.install &&
-      typeof (openworkClient as any).installHubSkill === "function";
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.hub?.skills?.install &&
+      typeof (mayaClient as any).installHubSkill === "function";
 
     if (!canUseOpenworkServer) {
       if (isRemoteWorkspace) {
-        return { ok: false, message: "OpenWork server unavailable. Connect to install skills." };
+        return { ok: false, message: "MAYA server unavailable. Connect to install skills." };
       }
-      return { ok: false, message: "Hub install requires OpenWork server." };
+      return { ok: false, message: "Hub install requires MAYA server." };
     }
 
     options.setBusy(true);
@@ -185,7 +185,7 @@ export function createExtensionsStore(options: {
     setSkillsStatus(null);
 
     try {
-      const result = await (openworkClient as any).installHubSkill(openworkWorkspaceId, trimmed);
+      const result = await (mayaClient as any).installHubSkill(mayaWorkspaceId, trimmed);
       await refreshSkills({ force: true });
       await refreshHubSkills({ force: true });
       if (!result?.ok) {
@@ -212,14 +212,14 @@ export function createExtensionsStore(options: {
     const root = options.activeWorkspaceRoot().trim();
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.skills?.read;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.skills?.read;
 
     if (!root) {
       setSkills([]);
@@ -227,7 +227,7 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    // Prefer OpenWork server when available
+    // Prefer MAYA server when available
     if (canUseOpenworkServer) {
       if (root !== skillsRoot) {
         skillsLoaded = false;
@@ -246,7 +246,7 @@ export function createExtensionsStore(options: {
 
       try {
         setSkillsStatus(null);
-        const response = await openworkClient.listSkills(openworkWorkspaceId, {
+        const response = await mayaClient.listSkills(mayaWorkspaceId, {
           includeGlobal: isLocalWorkspace,
         });
         if (refreshSkillsAborted) return;
@@ -327,7 +327,7 @@ export function createExtensionsStore(options: {
     const c = options.client();
     if (!c) {
       setSkills([]);
-      setSkillsStatus("OpenWork server unavailable. Connect to load skills.");
+      setSkillsStatus("MAYA server unavailable. Connect to load skills.");
       return;
     }
 
@@ -397,14 +397,14 @@ export function createExtensionsStore(options: {
   async function refreshPlugins(scopeOverride?: PluginScope) {
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.plugins?.read;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.plugins?.read;
 
     // Skip if already in flight
     if (refreshPluginsInFlight) {
@@ -428,7 +428,7 @@ export function createExtensionsStore(options: {
 
     if (scope === "project" && canUseOpenworkServer) {
       setPluginConfig(null);
-      setPluginConfigPath(`opencode.json (${isRemoteWorkspace ? "remote" : "openwork"} server)`);
+      setPluginConfigPath(`opencode.json (${isRemoteWorkspace ? "remote" : "maya"} server)`);
 
       try {
         setPluginStatus(null);
@@ -436,7 +436,7 @@ export function createExtensionsStore(options: {
 
         if (refreshPluginsAborted) return;
 
-        const result = await openworkClient.listPlugins(openworkWorkspaceId, { includeGlobal: false });
+        const result = await mayaClient.listPlugins(mayaWorkspaceId, { includeGlobal: false });
         if (refreshPluginsAborted) return;
 
         const configItems = result.items.filter((item) => item.source === "config" && item.scope === "project");
@@ -470,9 +470,9 @@ export function createExtensionsStore(options: {
     }
 
     if (!isLocalWorkspace && !canUseOpenworkServer) {
-      setPluginStatus("OpenWork server unavailable. Connect to manage plugins.");
+      setPluginStatus("MAYA server unavailable. Connect to manage plugins.");
       setPluginList([]);
-      setSidebarPluginStatus("Connect an OpenWork server to load plugins.");
+      setSidebarPluginStatus("Connect an MAYA server to load plugins.");
       setSidebarPluginList([]);
       refreshPluginsInFlight = false;
       return;
@@ -537,14 +537,14 @@ export function createExtensionsStore(options: {
 
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.plugins?.write;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.plugins?.write;
 
     if (!pluginName) {
       if (isManualInput) {
@@ -561,7 +561,7 @@ export function createExtensionsStore(options: {
     if (pluginScope() === "project" && canUseOpenworkServer) {
       try {
         setPluginStatus(null);
-        await openworkClient.addPlugin(openworkWorkspaceId, pluginName);
+        await mayaClient.addPlugin(mayaWorkspaceId, pluginName);
         if (isManualInput) {
           setPluginInput("");
         }
@@ -578,7 +578,7 @@ export function createExtensionsStore(options: {
     }
 
     if (!isLocalWorkspace && !canUseOpenworkServer) {
-      setPluginStatus("OpenWork server unavailable. Connect to manage plugins.");
+      setPluginStatus("MAYA server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -641,14 +641,14 @@ export function createExtensionsStore(options: {
 
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.plugins?.write;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.plugins?.write;
 
     if (pluginScope() !== "project" && !isLocalWorkspace) {
       setPluginStatus("Global plugins are only available for local workers.");
@@ -658,7 +658,7 @@ export function createExtensionsStore(options: {
     if (pluginScope() === "project" && canUseOpenworkServer) {
       try {
         setPluginStatus(null);
-        await openworkClient.removePlugin(openworkWorkspaceId, name);
+        await mayaClient.removePlugin(mayaWorkspaceId, name);
         await refreshPlugins("project");
       } catch (e) {
         setPluginStatus(e instanceof Error ? e.message : "Failed to remove plugin.");
@@ -672,7 +672,7 @@ export function createExtensionsStore(options: {
     }
 
     if (!isLocalWorkspace && !canUseOpenworkServer) {
-      setPluginStatus("OpenWork server unavailable. Connect to manage plugins.");
+      setPluginStatus("MAYA server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -769,23 +769,23 @@ export function createExtensionsStore(options: {
   async function installSkillCreator(): Promise<{ ok: boolean; message: string }> {
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.skills?.write;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.skills?.write;
 
-    // Use OpenWork server when available
+    // Use MAYA server when available
     if (canUseOpenworkServer) {
       options.setBusy(true);
       options.setError(null);
       setSkillsStatus(translate("skills.installing_skill_creator"));
 
       try {
-        await openworkClient.upsertSkill(openworkWorkspaceId, {
+        await mayaClient.upsertSkill(mayaWorkspaceId, {
           name: "skill-creator",
           content: skillCreatorTemplate,
         });
@@ -808,7 +808,7 @@ export function createExtensionsStore(options: {
 
     // Remote workspace without server
     if (isRemoteWorkspace) {
-      const message = "OpenWork server unavailable. Connect to install skills.";
+      const message = "MAYA server unavailable. Connect to install skills.";
       setSkillsStatus(message);
       return { ok: false, message };
     }
@@ -964,21 +964,21 @@ export function createExtensionsStore(options: {
 
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.skills?.read &&
-      typeof (openworkClient as any).getSkill === "function";
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.skills?.read &&
+      typeof (mayaClient as any).getSkill === "function";
 
     if (canUseOpenworkServer) {
       try {
         setSkillsStatus(null);
-        const result = await (openworkClient as OpenworkServerClient & { getSkill: any }).getSkill(
-          openworkWorkspaceId,
+        const result = await (mayaClient as OpenworkServerClient & { getSkill: any }).getSkill(
+          mayaWorkspaceId,
           trimmed,
           { includeGlobal: isLocalWorkspace },
         );
@@ -994,7 +994,7 @@ export function createExtensionsStore(options: {
     }
 
     if (isRemoteWorkspace) {
-      setSkillsStatus("OpenWork server unavailable. Connect to view skills.");
+      setSkillsStatus("MAYA server unavailable. Connect to view skills.");
       return null;
     }
 
@@ -1030,21 +1030,21 @@ export function createExtensionsStore(options: {
 
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const openworkClient = options.openworkServerClient();
-    const openworkWorkspaceId = options.openworkServerWorkspaceId();
-    const openworkCapabilities = options.openworkServerCapabilities();
+    const mayaClient = options.mayaServerClient();
+    const mayaWorkspaceId = options.mayaServerWorkspaceId();
+    const mayaCapabilities = options.mayaServerCapabilities();
     const canUseOpenworkServer =
-      options.openworkServerStatus() === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.skills?.write;
+      options.mayaServerStatus() === "connected" &&
+      mayaClient &&
+      mayaWorkspaceId &&
+      mayaCapabilities?.skills?.write;
 
     if (canUseOpenworkServer) {
       options.setBusy(true);
       options.setError(null);
       setSkillsStatus(null);
       try {
-        await openworkClient.upsertSkill(openworkWorkspaceId, {
+        await mayaClient.upsertSkill(mayaWorkspaceId, {
           name: trimmed,
           content: input.content,
           description: input.description,
@@ -1062,7 +1062,7 @@ export function createExtensionsStore(options: {
     }
 
     if (isRemoteWorkspace) {
-      setSkillsStatus("OpenWork server unavailable. Connect to edit skills.");
+      setSkillsStatus("MAYA server unavailable. Connect to edit skills.");
       return;
     }
 

@@ -15,7 +15,7 @@ import { readJsoncFile, updateJsoncTopLevel, writeJsoncFile } from "./jsonc.js";
 import { recordAudit, readAuditEntries, readLastAudit } from "./audit.js";
 import { ReloadEventStore } from "./events.js";
 import { parseFrontmatter } from "./frontmatter.js";
-import { opencodeConfigPath, openworkConfigPath, projectCommandsDir, projectSkillsDir } from "./workspace-files.js";
+import { opencodeConfigPath, mayaConfigPath, projectCommandsDir, projectSkillsDir } from "./workspace-files.js";
 import { ensureDir, exists, hashToken, shortId } from "./utils.js";
 import { workspaceIdForPath } from "./workspaces.js";
 import { sanitizeCommandName, validateMcpName } from "./validators.js";
@@ -56,7 +56,7 @@ export function createServerLogger(config: ServerConfig): ServerLogger {
   const runId = process.env.OPENWORK_RUN_ID ?? shortId();
   const host = hostname().trim();
   const resource: Record<string, string> = {
-    "service.name": "openwork-server",
+    "service.name": "maya-server",
     "service.version": SERVER_VERSION,
     "service.instance.id": runId,
   };
@@ -448,7 +448,7 @@ export function startServer(config: ServerConfig) {
         return finalize(response);
       } catch (error) {
         if (!(error instanceof ApiError)) {
-          console.error("[openwork-server] Unhandled error:", error);
+          console.error("[maya-server] Unhandled error:", error);
         }
         const apiError = error instanceof ApiError
           ? error
@@ -573,8 +573,8 @@ async function proxyOpencodeRequest(input: {
   const targetUrl = buildOpencodeProxyUrl(baseUrl, proxyPath, input.url.search);
   const headers = new Headers(input.request.headers);
   headers.delete("authorization");
-  headers.delete("x-openwork-host-token");
-  headers.delete("x-openwork-client-id");
+  headers.delete("x-maya-host-token");
+  headers.delete("x-maya-client-id");
   headers.delete("host");
   headers.delete("origin");
 
@@ -617,8 +617,8 @@ async function proxyOpenCodeRouterRequest(input: {
   const targetUrl = buildOpenCodeRouterProxyUrl(baseUrl, proxyPath, input.url.search);
   const headers = new Headers(input.request.headers);
   headers.delete("authorization");
-  headers.delete("x-openwork-host-token");
-  headers.delete("x-openwork-client-id");
+  headers.delete("x-maya-host-token");
+  headers.delete("x-maya-client-id");
   headers.delete("host");
   headers.delete("origin");
 
@@ -674,7 +674,7 @@ function withCors(response: Response, request: Request, config: ServerConfig) {
   headers.set("Access-Control-Allow-Origin", allowOrigin);
   headers.set(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type, X-OpenWork-Host-Token, X-OpenWork-Client-Id, X-OpenCode-Directory, X-Opencode-Directory, x-opencode-directory",
+    "Authorization, Content-Type, X-MAYA-Host-Token, X-MAYA-Client-Id, X-OpenCode-Directory, X-Opencode-Directory, x-opencode-directory",
   );
   headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   headers.set("Vary", "Origin");
@@ -692,12 +692,12 @@ async function requireClient(request: Request, config: ServerConfig, tokens: Tok
   if (!scope) {
     throw new ApiError(401, "unauthorized", "Invalid bearer token");
   }
-  const clientId = request.headers.get("x-openwork-client-id") ?? undefined;
+  const clientId = request.headers.get("x-maya-client-id") ?? undefined;
   return { type: "remote", clientId, tokenHash: hashToken(token), scope };
 }
 
 async function requireHost(request: Request, config: ServerConfig, tokens: TokenService): Promise<Actor> {
-  const hostToken = request.headers.get("x-openwork-host-token");
+  const hostToken = request.headers.get("x-maya-host-token");
   if (hostToken && hostToken === config.hostToken) {
     return { type: "host", tokenHash: hashToken(hostToken), scope: "owner" };
   }
@@ -712,7 +712,7 @@ async function requireHost(request: Request, config: ServerConfig, tokens: Token
   if (scope !== "owner") {
     throw new ApiError(401, "unauthorized", "Invalid host token");
   }
-  const clientId = request.headers.get("x-openwork-client-id") ?? undefined;
+  const clientId = request.headers.get("x-maya-client-id") ?? undefined;
   return { type: "remote", clientId, tokenHash: hashToken(bearer), scope };
 }
 
@@ -731,12 +731,12 @@ function buildCapabilities(config: ServerConfig): Capabilities {
   return {
     schemaVersion,
     serverVersion: SERVER_VERSION,
-    skills: { read: true, write: writeEnabled, source: "openwork" },
+    skills: { read: true, write: writeEnabled, source: "maya" },
     hub: {
       skills: {
         read: true,
         install: writeEnabled,
-        repo: { owner: "different-ai", name: "openwork-hub", ref: "main" },
+        repo: { owner: "different-ai", name: "maya-hub", ref: "main" },
       },
     },
     plugins: { read: true, write: writeEnabled },
@@ -757,8 +757,8 @@ function buildCapabilities(config: ServerConfig): Capabilities {
       files: {
         injection: writeEnabled && inboxEnabled,
         outbox: outboxEnabled,
-        inboxPath: ".opencode/openwork/inbox/",
-        outboxPath: ".opencode/openwork/outbox/",
+        inboxPath: ".opencode/maya/inbox/",
+        outboxPath: ".opencode/maya/outbox/",
         maxBytes,
       },
     },
@@ -821,15 +821,15 @@ function resolveBrowserProvider(): Capabilities["toolProviders"]["browser"] {
 }
 
 function resolveInboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "openwork", "inbox");
+  return join(workspaceRoot, ".opencode", "maya", "inbox");
 }
 
 function resolveOutboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "openwork", "outbox");
+  return join(workspaceRoot, ".opencode", "maya", "outbox");
 }
 
 function resolveAgentLabDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "openwork", "agentlab");
+  return join(workspaceRoot, ".opencode", "maya", "agentlab");
 }
 
 function resolveAgentLabAutomationsPath(workspaceRoot: string): string {
@@ -1473,7 +1473,7 @@ function createRoutes(config: ServerConfig, approvals: ApprovalService, tokens: 
       actor: ctx.actor ?? { type: "host" },
       action: "workspace.delete",
       target: "workspace",
-      summary: "Deleted workspace from OpenWork server",
+      summary: "Deleted workspace from MAYA server",
       timestamp: Date.now(),
     });
 
@@ -1490,9 +1490,9 @@ function createRoutes(config: ServerConfig, approvals: ApprovalService, tokens: 
   addRoute(routes, "GET", "/workspace/:id/config", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const opencode = await readOpencodeConfig(workspace.path);
-    const openwork = await readOpenworkConfig(workspace.path);
+    const maya = await readOpenworkConfig(workspace.path);
     const lastAudit = await readLastAudit(workspace.path, workspace.id);
-    return jsonResponse({ opencode, openwork, updatedAt: lastAudit?.timestamp ?? null });
+    return jsonResponse({ opencode, maya, updatedAt: lastAudit?.timestamp ?? null });
   });
 
   addRoute(routes, "GET", "/workspace/:id/audit", "client", async (ctx) => {
@@ -1528,24 +1528,24 @@ function createRoutes(config: ServerConfig, approvals: ApprovalService, tokens: 
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const body = await readJsonBody(ctx.request);
     const opencode = body.opencode as Record<string, unknown> | undefined;
-    const openwork = body.openwork as Record<string, unknown> | undefined;
+    const maya = body.maya as Record<string, unknown> | undefined;
 
-    if (!opencode && !openwork) {
-      throw new ApiError(400, "invalid_payload", "opencode or openwork updates required");
+    if (!opencode && !maya) {
+      throw new ApiError(400, "invalid_payload", "opencode or maya updates required");
     }
 
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "config.patch",
       summary: "Patch workspace config",
-      paths: [opencode ? opencodeConfigPath(workspace.path) : null, openwork ? openworkConfigPath(workspace.path) : null].filter(Boolean) as string[],
+      paths: [opencode ? opencodeConfigPath(workspace.path) : null, maya ? mayaConfigPath(workspace.path) : null].filter(Boolean) as string[],
     });
 
     if (opencode) {
       await updateJsoncTopLevel(opencodeConfigPath(workspace.path), opencode);
     }
-    if (openwork) {
-      await writeOpenworkConfig(workspace.path, openwork, true);
+    if (maya) {
+      await writeOpenworkConfig(workspace.path, maya, true);
     }
 
     await recordAudit(workspace.path, {
@@ -3717,7 +3717,7 @@ function createRoutes(config: ServerConfig, approvals: ApprovalService, tokens: 
       workspaceId: workspace.id,
       action: "config.import",
       summary: "Import workspace config",
-      paths: [opencodeConfigPath(workspace.path), openworkConfigPath(workspace.path)],
+      paths: [opencodeConfigPath(workspace.path), mayaConfigPath(workspace.path)],
     });
     await importWorkspace(workspace, body);
     await recordAudit(workspace.path, {
@@ -3820,7 +3820,7 @@ function expandHome(value: string): string {
 function resolveOpenCodeRouterConfigPath(): string {
   const override = process.env.OPENCODE_ROUTER_CONFIG_PATH?.trim();
   if (override) return expandHome(override);
-  const dataDir = process.env.OPENCODE_ROUTER_DATA_DIR?.trim() || join(homedir(), ".openwork", "opencode-router");
+  const dataDir = process.env.OPENCODE_ROUTER_DATA_DIR?.trim() || join(homedir(), ".maya", "opencode-router");
   return join(expandHome(dataDir), "opencode-router.json");
 }
 
@@ -5017,13 +5017,13 @@ async function readOpencodeConfig(workspaceRoot: string): Promise<Record<string,
 }
 
 async function readOpenworkConfig(workspaceRoot: string): Promise<Record<string, unknown>> {
-  const path = openworkConfigPath(workspaceRoot);
+  const path = mayaConfigPath(workspaceRoot);
   if (!(await exists(path))) return {};
   try {
     const raw = await readFile(path, "utf8");
     return JSON.parse(raw) as Record<string, unknown>;
   } catch {
-    throw new ApiError(422, "invalid_json", "Failed to parse openwork.json");
+    throw new ApiError(422, "invalid_json", "Failed to parse maya.json");
   }
 }
 
@@ -5087,7 +5087,7 @@ async function reloadOpencodeEngine(workspace: WorkspaceInfo): Promise<void> {
 }
 
 async function writeOpenworkConfig(workspaceRoot: string, payload: Record<string, unknown>, merge: boolean): Promise<void> {
-  const path = openworkConfigPath(workspaceRoot);
+  const path = mayaConfigPath(workspaceRoot);
   const next = merge ? { ...(await readOpenworkConfig(workspaceRoot)), ...payload } : payload;
   await ensureDir(join(workspaceRoot, ".opencode"));
   await writeFile(path, JSON.stringify(next, null, 2) + "\n", "utf8");
@@ -5109,7 +5109,7 @@ async function requireApproval(
 
 async function exportWorkspace(workspace: WorkspaceInfo) {
   const opencode = await readOpencodeConfig(workspace.path);
-  const openwork = await readOpenworkConfig(workspace.path);
+  const maya = await readOpenworkConfig(workspace.path);
   const skills = await listSkills(workspace.path, false);
   const commands = await listCommands(workspace.path, "workspace");
   const skillContents = await Promise.all(
@@ -5131,7 +5131,7 @@ async function exportWorkspace(workspace: WorkspaceInfo) {
     workspaceId: workspace.id,
     exportedAt: Date.now(),
     opencode,
-    openwork,
+    maya,
     skills: skillContents,
     commands: commandContents,
   };
@@ -5140,7 +5140,7 @@ async function exportWorkspace(workspace: WorkspaceInfo) {
 async function importWorkspace(workspace: WorkspaceInfo, payload: Record<string, unknown>): Promise<void> {
   const modes = (payload.mode as Record<string, string> | undefined) ?? {};
   const opencode = payload.opencode as Record<string, unknown> | undefined;
-  const openwork = payload.openwork as Record<string, unknown> | undefined;
+  const maya = payload.maya as Record<string, unknown> | undefined;
   const skills = (payload.skills as { name: string; content: string; description?: string }[] | undefined) ?? [];
   const commands = (payload.commands as { name: string; content?: string; description?: string; template?: string; agent?: string; model?: string | null; subtask?: boolean }[] | undefined) ?? [];
 
@@ -5152,11 +5152,11 @@ async function importWorkspace(workspace: WorkspaceInfo, payload: Record<string,
     }
   }
 
-  if (openwork) {
-    if (modes.openwork === "replace") {
-      await writeOpenworkConfig(workspace.path, openwork, false);
+  if (maya) {
+    if (modes.maya === "replace") {
+      await writeOpenworkConfig(workspace.path, maya, false);
     } else {
-      await writeOpenworkConfig(workspace.path, openwork, true);
+      await writeOpenworkConfig(workspace.path, maya, true);
     }
   }
 

@@ -29,7 +29,7 @@ export function LandingDen(props: Props) {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-16 px-6 pb-24 md:gap-20 md:px-8 md:pb-28">
           <section className="max-w-3xl pt-10 md:pt-16">
             <div className="mb-4 flex items-center gap-2 font-medium text-gray-500">
-              OpenWork hosted
+              MAYA hosted
             </div>
             <h1 className="mb-6 text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
               Den
@@ -207,7 +207,7 @@ export function LandingDen(props: Props) {
                   Telegram access
                 </h3>
                 <p className="leading-relaxed text-gray-600">
-                  Run and monitor the same workers from the OpenWork desktop app
+                  Run and monitor the same workers from the MAYA desktop app
                   or directly inside your team chats.
                 </p>
               </div>
@@ -220,7 +220,7 @@ export function LandingDen(props: Props) {
                   Skills, agents, and MCP included
                 </h3>
                 <p className="leading-relaxed text-gray-600">
-                  Bring your existing OpenWork setup and everything is available
+                  Bring your existing MAYA setup and everything is available
                   immediately in each hosted worker.
                 </p>
               </div>

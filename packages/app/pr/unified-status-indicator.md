@@ -7,7 +7,7 @@
 
 ## Goal
 
-Replace the two separate status indicators (OpenCode Engine + OpenWork Server) in the status bar with a single unified indicator that opens a detail popover on click.
+Replace the two separate status indicators (OpenCode Engine + MAYA Server) in the status bar with a single unified indicator that opens a detail popover on click.
 
 ---
 
@@ -27,7 +27,7 @@ The status bar shows two icons with individual colored dots, exposing internal a
 
 ### Changes
 
-1. **Unified status signal** — combines `clientConnected` and `openworkServerStatus` into a single computed: green/"Ready" only when both are healthy, red/"Unavailable" otherwise.
+1. **Unified status signal** — combines `clientConnected` and `mayaServerStatus` into a single computed: green/"Ready" only when both are healthy, red/"Unavailable" otherwise.
 
 2. **Single clickable indicator** — replaces the two separate icon+dot pairs with one dot + text label.
 
@@ -39,7 +39,7 @@ The status bar shows two icons with individual colored dots, exposing internal a
 
 ## Testing
 
-- [x] `pnpm --filter @different-ai/openwork-ui typecheck` passes
+- [x] `pnpm --filter @different-ai/maya-ui typecheck` passes
 - [ ] Manual: single indicator shows green "Ready" when both services healthy
 - [ ] Manual: shows red "Unavailable" when either service is down
 - [ ] Manual: click opens popover with per-service breakdown

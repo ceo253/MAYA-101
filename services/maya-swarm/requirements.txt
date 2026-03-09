@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+requests
+camel-ai[all]
+mem0ai
+supabase
+python-dotenv

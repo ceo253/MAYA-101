@@ -1,12 +1,12 @@
 import type { ModelRef, SuggestedPlugin } from "./types";
 
-export const MODEL_PREF_KEY = "openwork.defaultModel";
-export const SESSION_MODEL_PREF_KEY = "openwork.sessionModels";
-export const THINKING_PREF_KEY = "openwork.showThinking";
-export const VARIANT_PREF_KEY = "openwork.modelVariant";
-export const LANGUAGE_PREF_KEY = "openwork.language";
-export const HIDE_TITLEBAR_PREF_KEY = "openwork.hideTitlebar";
-export const AUTO_COMPACT_CONTEXT_PREF_KEY = "openwork.autoCompactContext";
+export const MODEL_PREF_KEY = "maya.defaultModel";
+export const SESSION_MODEL_PREF_KEY = "maya.sessionModels";
+export const THINKING_PREF_KEY = "maya.showThinking";
+export const VARIANT_PREF_KEY = "maya.modelVariant";
+export const LANGUAGE_PREF_KEY = "maya.language";
+export const HIDE_TITLEBAR_PREF_KEY = "maya.hideTitlebar";
+export const AUTO_COMPACT_CONTEXT_PREF_KEY = "maya.autoCompactContext";
 
 export const DEFAULT_MODEL: ModelRef = {
   providerID: "opencode",
@@ -17,7 +17,7 @@ export const SUGGESTED_PLUGINS: SuggestedPlugin[] = [
   {
     name: "opencode-scheduler",
     packageName: "opencode-scheduler",
-    description: "Run scheduled jobs with the OpenCode scheduler plugin.",
+    description: "Run scheduled jobs with the MAYA scheduler plugin.",
     tags: ["automation", "jobs"],
     installMode: "simple",
   },

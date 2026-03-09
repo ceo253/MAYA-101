@@ -1,9 +1,9 @@
-const OPENWORK_SITE_URL = "https://openwork.software";
-const OPENWORK_DOWNLOAD_URL = "https://openwork.software/download";
+const OPENWORK_SITE_URL = "https://maya.software";
+const OPENWORK_DOWNLOAD_URL = "https://maya.software/download";
 const OPENWORK_APP_URL =
   typeof process.env.PUBLIC_OPENWORK_APP_URL === "string" && process.env.PUBLIC_OPENWORK_APP_URL.trim()
     ? process.env.PUBLIC_OPENWORK_APP_URL.trim()
-    : "https://app.openwork.software";
+    : "https://app.maya.software";
 
 function escapeHtml(value) {
   return String(value)
@@ -65,9 +65,9 @@ function buildOpenInAppUrls(shareUrl, options = {}) {
     query.set("ow_label", label.slice(0, 120));
   }
 
-  const openInAppDeepLink = `openwork://import-bundle?${query.toString()}`;
+  const openInAppDeepLink = `maya://import-bundle?${query.toString()}`;
 
-  const appUrl = normalizeAppUrl(OPENWORK_APP_URL) || "https://app.openwork.software";
+  const appUrl = normalizeAppUrl(OPENWORK_APP_URL) || "https://app.maya.software";
   try {
     const url = new URL(appUrl);
     for (const [key, value] of query.entries()) {
@@ -80,7 +80,7 @@ function buildOpenInAppUrls(shareUrl, options = {}) {
   } catch {
     return {
       openInAppDeepLink,
-      openInWebAppUrl: `${"https://app.openwork.software"}?${query.toString()}`,
+      openInWebAppUrl: `${"https://app.maya.software"}?${query.toString()}`,
     };
   }
 }
@@ -192,14 +192,14 @@ export function renderBundlePage({ id, rawJson, req }) {
   const prettyBundleJson = prettyJson(rawJson);
   const schemaVersion = bundle.schemaVersion == null ? "unknown" : String(bundle.schemaVersion);
   const typeLabel = humanizeType(bundle.type);
-  const title = bundle.name || `OpenWork ${typeLabel}`;
+  const title = bundle.name || `MAYA ${typeLabel}`;
   const description =
     bundle.description ||
-    "OpenWork share links stay human-friendly for reading while still exposing a stable machine-readable JSON bundle.";
+    "MAYA share links stay human-friendly for reading while still exposing a stable machine-readable JSON bundle.";
   
   const workspaceSkills = listCount(bundle.workspace?.skills);
   const workspaceCommands = listCount(bundle.workspace?.commands);
-  const workspaceHasConfig = Boolean(maybeObject(bundle.workspace?.opencode) || maybeObject(bundle.workspace?.openwork));
+  const workspaceHasConfig = Boolean(maybeObject(bundle.workspace?.opencode) || maybeObject(bundle.workspace?.maya));
   const skillsSetCount = listCount(bundle.skills);
   
   const installHint =
@@ -246,12 +246,12 @@ export function renderBundlePage({ id, rawJson, req }) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)} - OpenWork Share</title>
+  <title>${escapeHtml(title)} - MAYA Share</title>
   <meta name="description" content="${escapeHtml(description)}" />
-  <meta name="openwork:bundle-id" content="${escapeHtml(id)}" />
-  <meta name="openwork:bundle-type" content="${escapeHtml(bundle.type || "unknown")}" />
-  <meta name="openwork:schema-version" content="${escapeHtml(schemaVersion)}" />
-  <meta name="openwork:open-in-app-url" content="${escapeHtml(openInAppDeepLink)}" />
+  <meta name="maya:bundle-id" content="${escapeHtml(id)}" />
+  <meta name="maya:bundle-type" content="${escapeHtml(bundle.type || "unknown")}" />
+  <meta name="maya:schema-version" content="${escapeHtml(schemaVersion)}" />
+  <meta name="maya:open-in-app-url" content="${escapeHtml(openInAppDeepLink)}" />
   <link rel="alternate" type="application/json" href="${escapeHtml(urls.jsonUrl)}" />
   <style>
     :root {
@@ -774,10 +774,10 @@ export function renderBundlePage({ id, rawJson, req }) {
   </style>
 </head>
 <body
-  data-openwork-share="true"
-  data-openwork-bundle-id="${escapeHtml(id)}"
-  data-openwork-bundle-type="${escapeHtml(bundle.type || "unknown")}" 
-  data-openwork-schema-version="${escapeHtml(schemaVersion)}"
+  data-maya-share="true"
+  data-maya-bundle-id="${escapeHtml(id)}"
+  data-maya-bundle-type="${escapeHtml(bundle.type || "unknown")}" 
+  data-maya-schema-version="${escapeHtml(schemaVersion)}"
 >
   <div class="modal-container">
     <div class="header">
@@ -788,7 +788,7 @@ export function renderBundlePage({ id, rawJson, req }) {
       <div class="header-content">
         <div class="avatar">${escapeHtml(avatarLetter)}</div>
         <div class="title-area">
-          <h1>OpenWork Share</h1>
+          <h1>MAYA Share</h1>
           <div class="subtitle-area">
             <span class="subtitle-text">${escapeHtml(title)}</span>
             <span class="dot"></span>
@@ -862,7 +862,7 @@ export function renderBundlePage({ id, rawJson, req }) {
     <div class="footer-fade"></div>
   </div>
 
-  <script id="openwork-bundle-json" type="application/json">${escapeJsonForScript(rawJson)}</script>
+  <script id="maya-bundle-json" type="application/json">${escapeJsonForScript(rawJson)}</script>
   
   <div class="toast" id="toast-message" role="status" aria-live="polite">
     <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M20 6 9 17l-5-5"/></svg>

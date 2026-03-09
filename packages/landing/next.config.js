@@ -26,8 +26,8 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: "/openwork",
-        destination: "/docs/openwork",
+        source: "/maya",
+        destination: "/docs/maya",
         permanent: false,
       },
       {
@@ -41,8 +41,8 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: "/create-openwork-instance",
-        destination: "/docs/create-openwork-instance",
+        source: "/create-maya-instance",
+        destination: "/docs/create-maya-instance",
         permanent: false,
       },
       {

@@ -11,7 +11,7 @@ import type {
   OpenworkServerDiagnostics,
   OpenworkServerSettings,
   OpenworkServerStatus,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import type {
   EngineInfo,
   OrchestratorBinaryInfo,
@@ -26,11 +26,14 @@ import {
   engineRestart,
   opencodeRouterRestart,
   opencodeRouterStop,
-  openworkServerRestart,
+  mayaServerRestart,
   pickFile,
   sandboxDebugProbe,
 } from "../lib/tauri";
 import { currentLocale, LANGUAGE_OPTIONS, t, type Language } from "../../i18n";
+
+import ByokSettings from "../components/byok-settings";
+import MemoryToggle from "../components/memory-toggle";
 
 export type SettingsViewProps = {
   startupPreference: StartupPreference | null;
@@ -43,18 +46,18 @@ export type SettingsViewProps = {
   providerConnectedIds: string[];
   providerAuthBusy: boolean;
   openProviderAuthModal: () => Promise<void>;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkServerUrl: string;
-  openworkReconnectBusy: boolean;
+  mayaServerStatus: OpenworkServerStatus;
+  mayaServerUrl: string;
+  mayaReconnectBusy: boolean;
   reconnectOpenworkServer: () => Promise<boolean>;
-  openworkServerHostInfo: OpenworkServerInfo | null;
-  openworkServerCapabilities: OpenworkServerCapabilities | null;
-  openworkServerDiagnostics: OpenworkServerDiagnostics | null;
-  openworkServerWorkspaceId: string | null;
+  mayaServerHostInfo: OpenworkServerInfo | null;
+  mayaServerCapabilities: OpenworkServerCapabilities | null;
+  mayaServerDiagnostics: OpenworkServerDiagnostics | null;
+  mayaServerWorkspaceId: string | null;
   activeWorkspaceRoot: string;
-  openworkAuditEntries: OpenworkAuditEntry[];
-  openworkAuditStatus: "idle" | "loading" | "error";
-  openworkAuditError: string | null;
+  mayaAuditEntries: OpenworkAuditEntry[];
+  mayaAuditStatus: "idle" | "loading" | "error";
+  mayaAuditError: string | null;
   opencodeConnectStatus: OpencodeConnectStatus | null;
   engineInfo: EngineInfo | null;
   orchestratorStatus: OrchestratorStatus | null;
@@ -67,8 +70,8 @@ export type SettingsViewProps = {
   setEngineSource: (value: "path" | "sidecar" | "custom") => void;
   engineCustomBinPath: string;
   setEngineCustomBinPath: (value: string) => void;
-  engineRuntime: "direct" | "openwork-orchestrator";
-  setEngineRuntime: (value: "direct" | "openwork-orchestrator") => void;
+  engineRuntime: "direct" | "maya-orchestrator";
+  setEngineRuntime: (value: "direct" | "maya-orchestrator") => void;
   isWindows: boolean;
   defaultModelLabel: string;
   defaultModelRef: string;
@@ -139,11 +142,11 @@ export type SettingsViewProps = {
 // Messaging identities + routing are managed in the Identities tab.
 export function OpenCodeRouterSettings(_props: {
   busy: boolean;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkServerUrl: string;
-  openworkServerSettings: OpenworkServerSettings;
-  openworkServerWorkspaceId: string | null;
-  openworkServerHostInfo: OpenworkServerInfo | null;
+  mayaServerStatus: OpenworkServerStatus;
+  mayaServerUrl: string;
+  mayaServerSettings: OpenworkServerSettings;
+  mayaServerWorkspaceId: string | null;
+  mayaServerHostInfo: OpenworkServerInfo | null;
   developerMode: boolean;
 }) {
   return (
@@ -167,7 +170,7 @@ export default function SettingsView(props: SettingsViewProps) {
   const handlePickEngineBinary = async () => {
     if (!isTauriRuntime()) return;
     try {
-      const selected = await pickFile({ title: "Select OpenCode binary" });
+      const selected = await pickFile({ title: "Select MAYA binary" });
       const path = Array.isArray(selected) ? selected[0] : selected;
       const trimmed = (path ?? "").trim();
       if (!trimmed) return;
@@ -329,11 +332,11 @@ export default function SettingsView(props: SettingsViewProps) {
   };
 
   const [providerConnectError, setProviderConnectError] = createSignal<string | null>(null);
-  const [openworkReconnectStatus, setOpenworkReconnectStatus] = createSignal<string | null>(null);
-  const [openworkReconnectError, setOpenworkReconnectError] = createSignal<string | null>(null);
-  const [openworkRestartBusy, setOpenworkRestartBusy] = createSignal(false);
-  const [openworkRestartStatus, setOpenworkRestartStatus] = createSignal<string | null>(null);
-  const [openworkRestartError, setOpenworkRestartError] = createSignal<string | null>(null);
+  const [mayaReconnectStatus, setOpenworkReconnectStatus] = createSignal<string | null>(null);
+  const [mayaReconnectError, setOpenworkReconnectError] = createSignal<string | null>(null);
+  const [mayaRestartBusy, setOpenworkRestartBusy] = createSignal(false);
+  const [mayaRestartStatus, setOpenworkRestartStatus] = createSignal<string | null>(null);
+  const [mayaRestartError, setOpenworkRestartError] = createSignal<string | null>(null);
   const providerConnectedCount = createMemo(() => (props.providerConnectedIds ?? []).length);
   const providerAvailableCount = createMemo(() => (props.providers ?? []).length);
   const connectedProviderNames = createMemo(() => {
@@ -362,7 +365,7 @@ export default function SettingsView(props: SettingsViewProps) {
     return "bg-green-7/10 text-green-11 border-green-7/20";
   });
   const providerSummary = createMemo(() => {
-    if (!providerAvailableCount()) return "Connect to OpenCode to load providers.";
+    if (!providerAvailableCount()) return "Connect to MAYA to load providers.";
     const connected = providerConnectedCount();
     const available = providerAvailableCount();
     if (!connected) return `${available} available`;
@@ -381,8 +384,8 @@ export default function SettingsView(props: SettingsViewProps) {
   };
 
   const handleReconnectOpenworkServer = async () => {
-    if (props.busy || props.openworkReconnectBusy) return;
-    if (!props.openworkServerUrl.trim()) return;
+    if (props.busy || props.mayaReconnectBusy) return;
+    if (!props.mayaServerUrl.trim()) return;
     setOpenworkReconnectStatus(null);
     setOpenworkReconnectError(null);
     try {
@@ -391,15 +394,15 @@ export default function SettingsView(props: SettingsViewProps) {
         setOpenworkReconnectError("Reconnect failed. Check server URL/token and try again.");
         return;
       }
-      setOpenworkReconnectStatus("Reconnected to OpenWork server.");
+      setOpenworkReconnectStatus("Reconnected to MAYA server.");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setOpenworkReconnectError(message || "Failed to reconnect OpenWork server.");
+      setOpenworkReconnectError(message || "Failed to reconnect MAYA server.");
     }
   };
 
   const handleRestartLocalServer = async () => {
-    if (props.busy || openworkRestartBusy()) return;
+    if (props.busy || mayaRestartBusy()) return;
     setOpenworkRestartStatus(null);
     setOpenworkRestartError(null);
     setOpenworkRestartBusy(true);
@@ -418,8 +421,8 @@ export default function SettingsView(props: SettingsViewProps) {
     }
   };
 
-  const openworkStatusLabel = createMemo(() => {
-    switch (props.openworkServerStatus) {
+  const mayaStatusLabel = createMemo(() => {
+    switch (props.mayaServerStatus) {
       case "connected":
         return "Connected";
       case "limited":
@@ -429,8 +432,8 @@ export default function SettingsView(props: SettingsViewProps) {
     }
   });
 
-  const openworkStatusStyle = createMemo(() => {
-    switch (props.openworkServerStatus) {
+  const mayaStatusStyle = createMemo(() => {
+    switch (props.mayaServerStatus) {
       case "connected":
         return "bg-green-7/10 text-green-11 border-green-7/20";
       case "limited":
@@ -488,8 +491,8 @@ export default function SettingsView(props: SettingsViewProps) {
 
   const [opencodeRouterRestarting, setOpenCodeRouterRestarting] = createSignal(false);
   const [opencodeRouterRestartError, setOpenCodeRouterRestartError] = createSignal<string | null>(null);
-  const [openworkServerRestarting, setOpenworkServerRestarting] = createSignal(false);
-  const [openworkServerRestartError, setOpenworkServerRestartError] = createSignal<string | null>(null);
+  const [mayaServerRestarting, setOpenworkServerRestarting] = createSignal(false);
+  const [mayaServerRestartError, setOpenworkServerRestartError] = createSignal<string | null>(null);
   const [opencodeRestarting, setOpencodeRestarting] = createSignal(false);
   const [opencodeRestartError, setOpencodeRestartError] = createSignal<string | null>(null);
 
@@ -533,11 +536,11 @@ export default function SettingsView(props: SettingsViewProps) {
   };
 
   const handleOpenworkServerRestart = async () => {
-    if (openworkServerRestarting() || !isTauriRuntime()) return;
+    if (mayaServerRestarting() || !isTauriRuntime()) return;
     setOpenworkServerRestarting(true);
     setOpenworkServerRestartError(null);
     try {
-      await openworkServerRestart();
+      await mayaServerRestart();
       await props.reconnectOpenworkServer();
     } catch (e) {
       setOpenworkServerRestartError(e instanceof Error ? e.message : String(e));
@@ -572,17 +575,17 @@ export default function SettingsView(props: SettingsViewProps) {
       : "bg-gray-4/60 text-gray-11 border-gray-7/50";
   });
 
-  const openworkAuditStatusLabel = createMemo(() => {
-    if (!props.openworkServerWorkspaceId) return "Unavailable";
-    if (props.openworkAuditStatus === "loading") return "Loading";
-    if (props.openworkAuditStatus === "error") return "Error";
+  const mayaAuditStatusLabel = createMemo(() => {
+    if (!props.mayaServerWorkspaceId) return "Unavailable";
+    if (props.mayaAuditStatus === "loading") return "Loading";
+    if (props.mayaAuditStatus === "error") return "Error";
     return "Ready";
   });
 
-  const openworkAuditStatusStyle = createMemo(() => {
-    if (!props.openworkServerWorkspaceId) return "bg-gray-4/60 text-gray-11 border-gray-7/50";
-    if (props.openworkAuditStatus === "loading") return "bg-amber-7/10 text-amber-11 border-amber-7/20";
-    if (props.openworkAuditStatus === "error") return "bg-red-7/10 text-red-11 border-red-7/20";
+  const mayaAuditStatusStyle = createMemo(() => {
+    if (!props.mayaServerWorkspaceId) return "bg-gray-4/60 text-gray-11 border-gray-7/50";
+    if (props.mayaAuditStatus === "loading") return "bg-amber-7/10 text-amber-11 border-amber-7/20";
+    if (props.mayaAuditStatus === "error") return "bg-red-7/10 text-red-11 border-red-7/20";
     return "bg-green-7/10 text-green-11 border-green-7/20";
   });
 
@@ -651,14 +654,14 @@ export default function SettingsView(props: SettingsViewProps) {
     return props.engineInfo?.lastStderr?.trim() || "No stderr captured yet.";
   };
 
-  const openworkStdout = () => {
-    if (!props.openworkServerHostInfo) return "Logs are available on the host.";
-    return props.openworkServerHostInfo.lastStdout?.trim() || "No stdout captured yet.";
+  const mayaStdout = () => {
+    if (!props.mayaServerHostInfo) return "Logs are available on the host.";
+    return props.mayaServerHostInfo.lastStdout?.trim() || "No stdout captured yet.";
   };
 
-  const openworkStderr = () => {
-    if (!props.openworkServerHostInfo) return "Logs are available on the host.";
-    return props.openworkServerHostInfo.lastStderr?.trim() || "No stderr captured yet.";
+  const mayaStderr = () => {
+    if (!props.mayaServerHostInfo) return "Logs are available on the host.";
+    return props.mayaServerHostInfo.lastStderr?.trim() || "No stderr captured yet.";
   };
 
   const opencodeRouterStdout = () => {
@@ -702,7 +705,7 @@ export default function SettingsView(props: SettingsViewProps) {
     if (binary) return formatOrchestratorBinary(binary);
     return props.engineDoctorVersion ?? "—";
   };
-  const openworkServerVersionLabel = () => props.openworkServerDiagnostics?.version ?? "—";
+  const mayaServerVersionLabel = () => props.mayaServerDiagnostics?.version ?? "—";
   const opencodeRouterVersionLabel = () => props.opencodeRouterInfo?.version ?? "—";
   const orchestratorVersionLabel = () => props.orchestratorStatus?.cliVersion ?? "—";
 
@@ -747,7 +750,7 @@ export default function SettingsView(props: SettingsViewProps) {
     if (!root) return "";
     const normalized = root.replace(/[\\/]+$/, "");
     const separator = props.isWindows ? "\\" : "/";
-    return `${normalized}${separator}.opencode${separator}openwork.json`;
+    return `${normalized}${separator}.maya${separator}maya.json`;
   });
 
   const runtimeDebugReport = createMemo(() => ({
@@ -762,7 +765,7 @@ export default function SettingsView(props: SettingsViewProps) {
     versions: {
       orchestrator: orchestratorVersionLabel(),
       opencode: opencodeVersionLabel(),
-      openworkServer: openworkServerVersionLabel(),
+      mayaServer: mayaServerVersionLabel(),
       opencodeRouter: opencodeRouterVersionLabel(),
     },
     services: {
@@ -779,12 +782,12 @@ export default function SettingsView(props: SettingsViewProps) {
         activeWorkspace: props.orchestratorStatus?.activeId ?? null,
         sidecar: orchestratorSidecarSummary(),
       },
-      openworkServer: {
-        status: openworkStatusLabel(),
-        baseUrl: (props.openworkServerHostInfo?.baseUrl ?? props.openworkServerUrl) || null,
-        pid: props.openworkServerHostInfo?.pid ?? null,
-        stdout: openworkStdout(),
-        stderr: openworkStderr(),
+      mayaServer: {
+        status: mayaStatusLabel(),
+        baseUrl: (props.mayaServerHostInfo?.baseUrl ?? props.mayaServerUrl) || null,
+        pid: props.mayaServerHostInfo?.pid ?? null,
+        stdout: mayaStdout(),
+        stderr: mayaStderr(),
       },
       opencodeRouter: {
         status: opencodeRouterStatusLabel(),
@@ -794,8 +797,8 @@ export default function SettingsView(props: SettingsViewProps) {
         stderr: opencodeRouterStderr(),
       },
     },
-    diagnostics: props.openworkServerDiagnostics,
-    capabilities: props.openworkServerCapabilities,
+    diagnostics: props.mayaServerDiagnostics,
+    capabilities: props.mayaServerCapabilities,
     pendingPermissions: props.pendingPermissions,
     recentEvents: props.events,
     workspaceDebugEvents: props.workspaceDebugEvents,
@@ -829,7 +832,7 @@ export default function SettingsView(props: SettingsViewProps) {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `openwork-debug-report-${stamp}.json`;
+      anchor.download = `maya-debug-report-${stamp}.json`;
       anchor.click();
       window.URL.revokeObjectURL(url);
       setDebugReportStatus("Exported runtime report JSON.");
@@ -907,11 +910,10 @@ export default function SettingsView(props: SettingsViewProps) {
           <For each={availableTabs()}>
             {(tab) => (
               <button
-                class={`px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
-                  activeTab() === tab
+                class={`px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${activeTab() === tab
                     ? "bg-gray-12/10 text-white border-gray-6/30"
                     : "text-gray-10 border-gray-6/50 hover:text-gray-12 hover:bg-gray-2/40"
-                }`}
+                  }`}
                 onClick={() => props.setSettingsTab(tab)}
               >
                 {tabLabel(tab)}
@@ -948,6 +950,8 @@ export default function SettingsView(props: SettingsViewProps) {
       <Switch>
         <Match when={activeTab() === "general"}>
           <div class="space-y-6">
+            <ByokSettings />
+            <MemoryToggle />
             <div class="bg-gray-2/30 border border-gray-7/60 rounded-2xl p-5 space-y-4">
               <div class="flex items-start justify-between gap-4">
                 <div>
@@ -1136,11 +1140,10 @@ export default function SettingsView(props: SettingsViewProps) {
               <div class="pt-1 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  class={`${compactOutlineActionClass} ${
-                    props.developerMode
+                  class={`${compactOutlineActionClass} ${props.developerMode
                       ? "border-blue-7/35 bg-blue-3/20 text-blue-11 hover:bg-blue-3/35 hover:text-blue-11"
                       : ""
-                  }`}
+                    }`}
                   onClick={props.toggleDeveloperMode}
                 >
                   <Zap size={14} class={props.developerMode ? "text-blue-10" : "text-dls-secondary"} />
@@ -1161,20 +1164,20 @@ export default function SettingsView(props: SettingsViewProps) {
                   type="button"
                   class={compactOutlineActionClass}
                   onClick={handleReconnectOpenworkServer}
-                  disabled={props.busy || props.openworkReconnectBusy || !props.openworkServerUrl.trim()}
+                  disabled={props.busy || props.mayaReconnectBusy || !props.mayaServerUrl.trim()}
                 >
-                  <RefreshCcw size={14} class={`text-dls-secondary ${props.openworkReconnectBusy ? "animate-spin" : ""}`} />
-                  {props.openworkReconnectBusy ? "Reconnecting..." : "Reconnect server"}
+                  <RefreshCcw size={14} class={`text-dls-secondary ${props.mayaReconnectBusy ? "animate-spin" : ""}`} />
+                  {props.mayaReconnectBusy ? "Reconnecting..." : "Reconnect server"}
                 </button>
                 <Show when={isLocalEngineRunning()}>
                   <button
                     type="button"
                     class={compactOutlineActionClass}
                     onClick={handleRestartLocalServer}
-                    disabled={props.busy || openworkRestartBusy()}
+                    disabled={props.busy || mayaRestartBusy()}
                   >
-                    <RefreshCcw size={14} class={`text-dls-secondary ${openworkRestartBusy() ? "animate-spin" : ""}`} />
-                    {openworkRestartBusy() ? "Restarting..." : "Restart local server"}
+                    <RefreshCcw size={14} class={`text-dls-secondary ${mayaRestartBusy() ? "animate-spin" : ""}`} />
+                    {mayaRestartBusy() ? "Restarting..." : "Restart local server"}
                   </button>
                 </Show>
                 <Show when={isLocalEngineRunning()}>
@@ -1188,7 +1191,7 @@ export default function SettingsView(props: SettingsViewProps) {
                     Stop local server
                   </button>
                 </Show>
-                <Show when={!isLocalEngineRunning() && props.openworkServerStatus === "connected"}>
+                <Show when={!isLocalEngineRunning() && props.mayaServerStatus === "connected"}>
                   <button
                     type="button"
                     class={compactOutlineActionClass}
@@ -1199,16 +1202,16 @@ export default function SettingsView(props: SettingsViewProps) {
                   </button>
                 </Show>
               </div>
-              <Show when={openworkReconnectStatus()}>
+              <Show when={mayaReconnectStatus()}>
                 {(value) => <div class="text-xs text-gray-10">{value()}</div>}
               </Show>
-              <Show when={openworkReconnectError()}>
+              <Show when={mayaReconnectError()}>
                 {(value) => <div class="text-xs text-red-11">{value()}</div>}
               </Show>
-              <Show when={openworkRestartStatus()}>
+              <Show when={mayaRestartStatus()}>
                 {(value) => <div class="text-xs text-gray-10">{value()}</div>}
               </Show>
-              <Show when={openworkRestartError()}>
+              <Show when={mayaRestartError()}>
                 {(value) => <div class="text-xs text-red-11">{value()}</div>}
               </Show>
             </div>
@@ -1240,11 +1243,10 @@ export default function SettingsView(props: SettingsViewProps) {
               <Show when={props.migrationRepairResult}>
                 {(result) => (
                   <div
-                    class={`rounded-xl border px-3 py-2 text-xs ${
-                      result().ok
+                    class={`rounded-xl border px-3 py-2 text-xs ${result().ok
                         ? "border-green-7/30 bg-green-2/30 text-green-12"
                         : "border-red-7/30 bg-red-2/30 text-red-12"
-                    }`}
+                      }`}
                   >
                     {result().message}
                   </div>
@@ -1256,7 +1258,7 @@ export default function SettingsView(props: SettingsViewProps) {
               <div class="flex items-start justify-between gap-4">
                 <div>
                   <div class="text-sm font-medium text-gray-12">Updates</div>
-                  <div class="text-xs text-gray-10">Keep OpenWork up to date.</div>
+                  <div class="text-xs text-gray-10">Keep MAYA up to date.</div>
                 </div>
                 <div class="text-xs text-gray-7 font-mono">{props.appVersion ? `v${props.appVersion}` : ""}</div>
               </div>
@@ -1271,14 +1273,13 @@ export default function SettingsView(props: SettingsViewProps) {
                         <div class="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6">
                           <div class="space-y-0.5">
                             <div class="text-sm text-gray-12">Background checks</div>
-                            <div class="text-xs text-gray-7">OpenWork always checks on launch. Also checks once per day (quiet).</div>
+                            <div class="text-xs text-gray-7">MAYA always checks on launch. Also checks once per day (quiet).</div>
                           </div>
                           <button
-                            class={`min-w-[70px] px-4 py-1.5 rounded-full text-xs font-medium border shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-colors ${
-                              props.updateAutoCheck
+                            class={`min-w-[70px] px-4 py-1.5 rounded-full text-xs font-medium border shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-colors ${props.updateAutoCheck
                                 ? "bg-gray-12/12 text-gray-12 border-gray-6/30"
                                 : "bg-gray-1/70 text-gray-10 border-gray-6/60 hover:text-gray-12 hover:bg-gray-2/70"
-                            }`}
+                              }`}
                             onClick={props.toggleUpdateAutoCheck}
                           >
                             {props.updateAutoCheck ? "On" : "Off"}
@@ -1291,11 +1292,10 @@ export default function SettingsView(props: SettingsViewProps) {
                             <div class="text-xs text-gray-7">Download updates automatically (prompts to restart)</div>
                           </div>
                           <button
-                            class={`min-w-[70px] px-4 py-1.5 rounded-full text-xs font-medium border shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-colors ${
-                              props.updateAutoDownload
+                            class={`min-w-[70px] px-4 py-1.5 rounded-full text-xs font-medium border shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-colors ${props.updateAutoDownload
                                 ? "bg-gray-12/12 text-gray-12 border-gray-6/30"
                                 : "bg-gray-1/70 text-gray-10 border-gray-6/60 hover:text-gray-12 hover:bg-gray-2/70"
-                            }`}
+                              }`}
                             onClick={props.toggleUpdateAutoDownload}
                           >
                             {props.updateAutoDownload ? "On" : "Off"}
@@ -1447,7 +1447,7 @@ export default function SettingsView(props: SettingsViewProps) {
                     <div>Commit: {appCommitLabel()}</div>
                     <div>Orchestrator: {orchestratorVersionLabel()}</div>
                     <div>OpenCode: {opencodeVersionLabel()}</div>
-                    <div>OpenWork server: {openworkServerVersionLabel()}</div>
+                    <div>MAYA server: {mayaServerVersionLabel()}</div>
                     <div>OpenCodeRouter: {opencodeRouterVersionLabel()}</div>
                   </div>
                   <pre class="text-xs text-gray-12 whitespace-pre-wrap break-words max-h-64 overflow-auto bg-gray-1 border border-gray-6 rounded-lg p-3">
@@ -1503,7 +1503,7 @@ export default function SettingsView(props: SettingsViewProps) {
 
                 <div class="bg-gray-2/30 border border-gray-6/50 rounded-2xl p-5 space-y-3">
                   <div class="text-sm font-medium text-gray-12">Workspace config</div>
-                  <div class="text-xs text-gray-10">Reveal or reset `.opencode/openwork.json` defaults for this app workspace.</div>
+                  <div class="text-xs text-gray-10">Reveal or reset `.opencode/maya.json` defaults for this app workspace.</div>
                   <div class="text-[11px] text-gray-7 font-mono break-all">{workspaceConfigPath() || "No active local workspace."}</div>
                   <div class="flex flex-wrap items-center gap-2">
                     <Button
@@ -1554,9 +1554,9 @@ export default function SettingsView(props: SettingsViewProps) {
 
                 <div class="bg-gray-2/30 border border-gray-6/50 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div class="min-w-0">
-                    <div class="text-sm text-gray-12">OpenWork Docker containers</div>
+                    <div class="text-sm text-gray-12">MAYA Docker containers</div>
                     <div class="text-xs text-gray-7">
-                      Force-remove Docker containers launched by OpenWork (sandbox + local dev stacks).
+                      Force-remove Docker containers launched by MAYA (sandbox + local dev stacks).
                     </div>
                     <Show when={props.dockerCleanupResult}>
                       <div class="text-xs text-gray-11 mt-2">{props.dockerCleanupResult}</div>
@@ -1585,9 +1585,8 @@ export default function SettingsView(props: SettingsViewProps) {
                   <div class="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6">
                     <div class="flex items-center gap-3">
                       <div
-                        class={`p-2 rounded-lg ${
-                          isLocalPreference() ? "bg-indigo-7/10 text-indigo-11" : "bg-green-7/10 text-green-11"
-                        }`}
+                        class={`p-2 rounded-lg ${isLocalPreference() ? "bg-indigo-7/10 text-indigo-11" : "bg-green-7/10 text-green-11"
+                          }`}
                       >
                         <Show when={isLocalPreference()} fallback={<Smartphone size={18} />}>
                           <HardDrive size={18} />
@@ -1694,7 +1693,7 @@ export default function SettingsView(props: SettingsViewProps) {
                           </Button>
                         </div>
                         <div class="text-[11px] text-gray-7">
-                          Use this to point OpenWork at a local OpenCode build (e.g. your fork). Applies next time the engine starts or reloads.
+                          Use this to point MAYA at a local OpenCode build (e.g. your fork). Applies next time the engine starts or reloads.
                         </div>
                       </div>
                     </Show>
@@ -1711,11 +1710,11 @@ export default function SettingsView(props: SettingsViewProps) {
                             Direct (OpenCode)
                           </Button>
                           <Button
-                            variant={props.engineRuntime === "openwork-orchestrator" ? "secondary" : "outline"}
-                            onClick={() => props.setEngineRuntime("openwork-orchestrator")}
+                            variant={props.engineRuntime === "maya-orchestrator" ? "secondary" : "outline"}
+                            onClick={() => props.setEngineRuntime("maya-orchestrator")}
                             disabled={props.busy}
                           >
-                            OpenWork Orchestrator
+                            MAYA Orchestrator
                           </Button>
                         </div>
                         <div class="text-[11px] text-gray-7">Applies the next time the engine starts or reloads.</div>
@@ -1733,7 +1732,7 @@ export default function SettingsView(props: SettingsViewProps) {
                   <div class="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6 gap-3">
                     <div class="min-w-0">
                       <div class="text-sm text-gray-12">Reset onboarding</div>
-                      <div class="text-xs text-gray-7">Clears OpenWork preferences and restarts the app.</div>
+                      <div class="text-xs text-gray-7">Clears MAYA preferences and restarts the app.</div>
                     </div>
                     <Button
                       variant="outline"
@@ -1749,7 +1748,7 @@ export default function SettingsView(props: SettingsViewProps) {
                   <div class="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6 gap-3">
                     <div class="min-w-0">
                       <div class="text-sm text-gray-12">Reset app data</div>
-                      <div class="text-xs text-gray-7">More aggressive. Clears OpenWork cache + app data.</div>
+                      <div class="text-xs text-gray-7">More aggressive. Clears MAYA cache + app data.</div>
                     </div>
                     <Button
                       variant="danger"
@@ -1782,11 +1781,11 @@ export default function SettingsView(props: SettingsViewProps) {
                       <Button
                         variant="secondary"
                         onClick={handleRestartLocalServer}
-                        disabled={props.busy || openworkRestartBusy() || !isTauriRuntime()}
+                        disabled={props.busy || mayaRestartBusy() || !isTauriRuntime()}
                         class="text-xs px-3 py-1.5 justify-center"
                       >
-                        <RefreshCcw class={`w-3.5 h-3.5 mr-1.5 ${openworkRestartBusy() ? "animate-spin" : ""}`} />
-                        {openworkRestartBusy() ? "Restarting..." : "Restart orchestrator"}
+                        <RefreshCcw class={`w-3.5 h-3.5 mr-1.5 ${mayaRestartBusy() ? "animate-spin" : ""}`} />
+                        {mayaRestartBusy() ? "Restarting..." : "Restart orchestrator"}
                       </Button>
                       <Button
                         variant="secondary"
@@ -1800,11 +1799,11 @@ export default function SettingsView(props: SettingsViewProps) {
                       <Button
                         variant="secondary"
                         onClick={handleOpenworkServerRestart}
-                        disabled={openworkServerRestarting() || !isTauriRuntime()}
+                        disabled={mayaServerRestarting() || !isTauriRuntime()}
                         class="text-xs px-3 py-1.5 justify-center"
                       >
-                        <RefreshCcw class={`w-3.5 h-3.5 mr-1.5 ${openworkServerRestarting() ? "animate-spin" : ""}`} />
-                        {openworkServerRestarting() ? "Restarting..." : "Restart OpenWork server"}
+                        <RefreshCcw class={`w-3.5 h-3.5 mr-1.5 ${mayaServerRestarting() ? "animate-spin" : ""}`} />
+                        {mayaServerRestarting() ? "Restarting..." : "Restart MAYA server"}
                       </Button>
                       <Button
                         variant="secondary"
@@ -1816,12 +1815,12 @@ export default function SettingsView(props: SettingsViewProps) {
                         {opencodeRouterRestarting() ? "Restarting..." : "Restart OpenCodeRouter"}
                       </Button>
                     </div>
-                    <Show when={openworkRestartStatus()}>
-                      <div class="text-xs text-green-11 bg-green-3/50 border border-green-6 rounded-lg p-2">{openworkRestartStatus()}</div>
+                    <Show when={mayaRestartStatus()}>
+                      <div class="text-xs text-green-11 bg-green-3/50 border border-green-6 rounded-lg p-2">{mayaRestartStatus()}</div>
                     </Show>
-                    <Show when={openworkRestartError() || opencodeRestartError() || openworkServerRestartError() || opencodeRouterRestartError()}>
+                    <Show when={mayaRestartError() || opencodeRestartError() || mayaServerRestartError() || opencodeRouterRestartError()}>
                       <div class="text-xs text-red-11 bg-red-3/50 border border-red-6 rounded-lg p-2">
-                        {openworkRestartError() || opencodeRestartError() || openworkServerRestartError() || opencodeRouterRestartError()}
+                        {mayaRestartError() || opencodeRestartError() || mayaServerRestartError() || opencodeRouterRestartError()}
                       </div>
                     </Show>
                   </div>
@@ -1832,16 +1831,16 @@ export default function SettingsView(props: SettingsViewProps) {
                         <div class="text-sm font-medium text-gray-12">Versions</div>
                         <div class="text-xs text-gray-10">Sidecar + desktop build info.</div>
                       </div>
-                        <div class="space-y-1">
-                          <div class="text-[11px] text-gray-7 font-mono truncate">Desktop app: {appVersionLabel()}</div>
-                          <div class="text-[11px] text-gray-7 font-mono truncate">Commit: {appCommitLabel()}</div>
-                          <div class="text-[11px] text-gray-7 font-mono truncate">Orchestrator: {orchestratorVersionLabel()}</div>
-                          <div class="text-[11px] text-gray-7 font-mono truncate">OpenCode: {opencodeVersionLabel()}</div>
-                          <div class="text-[11px] text-gray-7 font-mono truncate">
-                            OpenWork server: {openworkServerVersionLabel()}
-                          </div>
-                          <div class="text-[11px] text-gray-7 font-mono truncate">OpenCodeRouter: {opencodeRouterVersionLabel()}</div>
+                      <div class="space-y-1">
+                        <div class="text-[11px] text-gray-7 font-mono truncate">Desktop app: {appVersionLabel()}</div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">Commit: {appCommitLabel()}</div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">Orchestrator: {orchestratorVersionLabel()}</div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">OpenCode: {opencodeVersionLabel()}</div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">
+                          MAYA server: {mayaServerVersionLabel()}
                         </div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">OpenCodeRouter: {opencodeRouterVersionLabel()}</div>
+                      </div>
                     </div>
 
                     <div class="bg-gray-1 p-4 rounded-xl border border-gray-6 space-y-3">
@@ -1982,30 +1981,30 @@ export default function SettingsView(props: SettingsViewProps) {
                     <div class="bg-gray-1 p-4 rounded-xl border border-gray-6 space-y-3">
                       <div class="flex items-center justify-between gap-3">
                         <div>
-                          <div class="text-sm font-medium text-gray-12">OpenWork server</div>
+                          <div class="text-sm font-medium text-gray-12">MAYA server</div>
                           <div class="text-xs text-gray-10">Config and approvals sidecar.</div>
                         </div>
-                        <div class={`text-xs px-2 py-1 rounded-full border ${openworkStatusStyle()}`}>
-                          {openworkStatusLabel()}
+                        <div class={`text-xs px-2 py-1 rounded-full border ${mayaStatusStyle()}`}>
+                          {mayaStatusLabel()}
                         </div>
                       </div>
                       <div class="space-y-1">
                         <div class="text-[11px] text-gray-7 font-mono truncate">
-                          {(props.openworkServerHostInfo?.baseUrl ?? props.openworkServerUrl) || "Base URL unavailable"}
+                          {(props.mayaServerHostInfo?.baseUrl ?? props.mayaServerUrl) || "Base URL unavailable"}
                         </div>
-                        <div class="text-[11px] text-gray-7 font-mono truncate">PID: {props.openworkServerHostInfo?.pid ?? "—"}</div>
+                        <div class="text-[11px] text-gray-7 font-mono truncate">PID: {props.mayaServerHostInfo?.pid ?? "—"}</div>
                       </div>
                       <div class="grid gap-2">
                         <div>
                           <div class="text-[11px] text-gray-9 mb-1">Last stdout</div>
                           <pre class="text-xs text-gray-12 whitespace-pre-wrap break-words max-h-24 overflow-auto bg-gray-2/50 border border-gray-6 rounded-lg p-2">
-                            {openworkStdout()}
+                            {mayaStdout()}
                           </pre>
                         </div>
                         <div>
                           <div class="text-[11px] text-gray-9 mb-1">Last stderr</div>
                           <pre class="text-xs text-gray-12 whitespace-pre-wrap break-words max-h-24 overflow-auto bg-gray-2/50 border border-gray-6 rounded-lg p-2">
-                            {openworkStderr()}
+                            {mayaStderr()}
                           </pre>
                         </div>
                       </div>
@@ -2078,13 +2077,13 @@ export default function SettingsView(props: SettingsViewProps) {
 
                   <div class="bg-gray-1 p-4 rounded-xl border border-gray-6 space-y-3">
                     <div class="flex items-center justify-between gap-3">
-                      <div class="text-sm font-medium text-gray-12">OpenWork server diagnostics</div>
+                      <div class="text-sm font-medium text-gray-12">MAYA server diagnostics</div>
                       <div class="text-[11px] text-gray-8 font-mono truncate">
-                        {props.openworkServerDiagnostics?.version ?? "—"}
+                        {props.mayaServerDiagnostics?.version ?? "—"}
                       </div>
                     </div>
                     <Show
-                      when={props.openworkServerDiagnostics}
+                      when={props.mayaServerDiagnostics}
                       fallback={<div class="text-xs text-gray-9">Diagnostics unavailable.</div>}
                     >
                       {(diag) => (
@@ -2106,13 +2105,13 @@ export default function SettingsView(props: SettingsViewProps) {
 
                   <div class="bg-gray-1 p-4 rounded-xl border border-gray-6 space-y-3">
                     <div class="flex items-center justify-between gap-3">
-                      <div class="text-sm font-medium text-gray-12">OpenWork server capabilities</div>
+                      <div class="text-sm font-medium text-gray-12">MAYA server capabilities</div>
                       <div class="text-[11px] text-gray-8 font-mono truncate">
-                        {props.openworkServerWorkspaceId ? `Worker ${props.openworkServerWorkspaceId}` : "Worker unresolved"}
+                        {props.mayaServerWorkspaceId ? `Worker ${props.mayaServerWorkspaceId}` : "Worker unresolved"}
                       </div>
                     </div>
                     <Show
-                      when={props.openworkServerCapabilities}
+                      when={props.mayaServerCapabilities}
                       fallback={<div class="text-xs text-gray-9">Capabilities unavailable. Connect with a client token.</div>}
                     >
                       {(caps) => (
@@ -2186,19 +2185,19 @@ export default function SettingsView(props: SettingsViewProps) {
                   <div class="bg-gray-1 p-4 rounded-xl border border-gray-6 space-y-3">
                     <div class="flex items-center justify-between gap-3">
                       <div class="text-sm font-medium text-gray-12">Audit log</div>
-                      <div class={`text-xs px-2 py-1 rounded-full border ${openworkAuditStatusStyle()}`}>
-                        {openworkAuditStatusLabel()}
+                      <div class={`text-xs px-2 py-1 rounded-full border ${mayaAuditStatusStyle()}`}>
+                        {mayaAuditStatusLabel()}
                       </div>
                     </div>
-                    <Show when={props.openworkAuditError}>
-                      <div class="text-xs text-red-11">{props.openworkAuditError}</div>
+                    <Show when={props.mayaAuditError}>
+                      <div class="text-xs text-red-11">{props.mayaAuditError}</div>
                     </Show>
                     <Show
-                      when={props.openworkAuditEntries.length > 0}
+                      when={props.mayaAuditEntries.length > 0}
                       fallback={<div class="text-xs text-gray-9">No audit entries yet.</div>}
                     >
                       <div class="divide-y divide-gray-6/50">
-                        <For each={props.openworkAuditEntries}>
+                        <For each={props.mayaAuditEntries}>
                           {(entry) => (
                             <div class="flex items-start justify-between gap-4 py-2">
                               <div class="min-w-0">

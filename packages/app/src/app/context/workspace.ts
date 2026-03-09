@@ -29,7 +29,7 @@ import {
   type OpenworkServerClient,
   type OpenworkServerSettings,
   type OpenworkWorkspaceInfo,
-} from "../lib/openwork-server";
+} from "../lib/maya-server";
 import { downloadDir, homeDir } from "@tauri-apps/api/path";
 import {
   engineDoctor,
@@ -141,9 +141,9 @@ export function createWorkspaceStore(options: {
   setView: (value: any) => void;
   setTab: (value: any) => void;
   isWindowsPlatform: () => boolean;
-  openworkServerSettings: () => OpenworkServerSettings;
+  mayaServerSettings: () => OpenworkServerSettings;
   updateOpenworkServerSettings: (next: OpenworkServerSettings) => void;
-  openworkServerClient?: () => OpenworkServerClient | null;
+  mayaServerClient?: () => OpenworkServerClient | null;
   setOpencodeConnectStatus?: (status: OpencodeConnectStatus | null) => void;
   onEngineStable?: () => void;
   engineRuntime?: () => EngineRuntime;
@@ -332,25 +332,25 @@ export function createWorkspaceStore(options: {
         baseUrl: null,
         directory: null,
         displayName: null,
-        openworkHostUrl: null,
-        openworkWorkspaceId: null,
-        openworkWorkspaceName: null,
+        mayaHostUrl: null,
+        mayaWorkspaceId: null,
+        mayaWorkspaceName: null,
       };
     }
     const displayName =
       ws.displayName?.trim() ||
-      ws.openworkWorkspaceName?.trim() ||
+      ws.mayaWorkspaceName?.trim() ||
       ws.name ||
-      ws.openworkHostUrl ||
+      ws.mayaHostUrl ||
       ws.baseUrl ||
       ws.path ||
       "Worker";
     return { ...ws, name: displayName };
   });
   const normalizeRemoteType = (value?: WorkspaceInfo["remoteType"] | null) =>
-    value === "openwork" ? "openwork" : "opencode";
+    value === "maya" ? "maya" : "opencode";
   const isOpenworkRemote = (workspace: WorkspaceInfo | null) =>
-    Boolean(workspace && workspace.workspaceType === "remote" && normalizeRemoteType(workspace.remoteType) === "openwork");
+    Boolean(workspace && workspace.workspaceType === "remote" && normalizeRemoteType(workspace.remoteType) === "maya");
   const activeWorkspacePath = createMemo(() => {
     const ws = activeWorkspaceInfo();
     if (!ws) return "";
@@ -448,15 +448,15 @@ export function createWorkspaceStore(options: {
     } catch (error) {
       if (error instanceof OpenworkServerError && (error.status === 401 || error.status === 403)) {
         if (!trimmedToken) {
-          throw new Error("Access token required for OpenWork server.");
+          throw new Error("Access token required for MAYA server.");
         }
-        throw new Error("OpenWork server rejected the access token.");
+        throw new Error("MAYA server rejected the access token.");
       }
       return { kind: "fallback" as const };
     }
 
     if (!trimmedToken) {
-      throw new Error("Access token required for OpenWork server.");
+      throw new Error("Access token required for MAYA server.");
     }
 
     const response = await client.listWorkspaces();
@@ -475,7 +475,7 @@ export function createWorkspaceStore(options: {
       ? (items.find((item) => item?.id && selectById(item as any)) as OpenworkWorkspaceInfo | undefined)
       : undefined;
     if (requestedWorkspaceId && !workspaceById) {
-      throw new Error("OpenWork worker not found on that host.");
+      throw new Error("MAYA worker not found on that host.");
     }
 
     const workspaceByHint = hint
@@ -484,22 +484,22 @@ export function createWorkspaceStore(options: {
 
     const workspace = (workspaceById ?? workspaceByHint ?? items[0]) as OpenworkWorkspaceInfo | undefined;
     if (!workspace?.id) {
-      throw new Error("OpenWork server did not return a worker.");
+      throw new Error("MAYA server did not return a worker.");
     }
     const opencodeUpstreamBaseUrl = workspace.opencode?.baseUrl?.trim() ?? workspace.baseUrl?.trim() ?? "";
     if (!opencodeUpstreamBaseUrl) {
-      throw new Error("OpenWork server did not provide an OpenCode URL.");
+      throw new Error("MAYA server did not provide an OpenCode URL.");
     }
 
     const workspaceScopedBaseUrl =
       buildOpenworkWorkspaceBaseUrl(normalizedHostUrl, workspace.id) ?? workspaceBaseUrl;
     const opencodeBaseUrl = `${workspaceScopedBaseUrl.replace(/\/+$/, "")}/opencode`;
     const opencodeAuth: OpencodeAuth | undefined = trimmedToken
-      ? { token: trimmedToken, mode: "openwork" }
+      ? { token: trimmedToken, mode: "maya" }
       : undefined;
 
     return {
-      kind: "openwork" as const,
+      kind: "maya" as const,
       hostUrl: normalizedHostUrl,
       workspace,
       opencodeBaseUrl,
@@ -508,7 +508,7 @@ export function createWorkspaceStore(options: {
     };
   };
 
-  const resolveEngineRuntime = () => options.engineRuntime?.() ?? "openwork-orchestrator";
+  const resolveEngineRuntime = () => options.engineRuntime?.() ?? "maya-orchestrator";
 
   const resolveWorkspacePaths = () => {
     const active = activeWorkspacePath().trim();
@@ -526,7 +526,7 @@ export function createWorkspaceStore(options: {
   };
 
   const activateOpenworkHostWorkspace = async (workspacePath: string) => {
-    const client = options.openworkServerClient?.();
+    const client = options.mayaServerClient?.();
     if (!client) return;
     const targetPath = normalizeDirectoryPath(workspacePath);
     if (!targetPath) return;
@@ -557,28 +557,28 @@ export function createWorkspaceStore(options: {
 
     const remoteType = normalizeRemoteType(workspace.remoteType);
 
-    if (remoteType === "openwork") {
+    if (remoteType === "maya") {
       const hostUrl =
-        workspace.openworkHostUrl?.trim() || workspace.baseUrl?.trim() || workspace.path?.trim() || "";
+        workspace.mayaHostUrl?.trim() || workspace.baseUrl?.trim() || workspace.path?.trim() || "";
       if (!hostUrl) {
         updateWorkspaceConnectionState(id, {
           status: "error",
-          message: "OpenWork server URL is required.",
+          message: "MAYA server URL is required.",
         });
         return false;
       }
 
-      const token = workspace.openworkToken?.trim() || options.openworkServerSettings().token || undefined;
+      const token = workspace.mayaToken?.trim() || options.mayaServerSettings().token || undefined;
       try {
         const resolved = await resolveOpenworkHost({
           hostUrl,
           token,
-          workspaceId: workspace.openworkWorkspaceId ?? null,
+          workspaceId: workspace.mayaWorkspaceId ?? null,
         });
-        if (resolved.kind !== "openwork") {
+        if (resolved.kind !== "maya") {
           updateWorkspaceConnectionState(id, {
             status: "error",
-            message: "OpenWork server unavailable. Check the URL and token.",
+            message: "MAYA server unavailable. Check the URL and token.",
           });
           return false;
         }
@@ -745,22 +745,22 @@ export function createWorkspaceStore(options: {
       if (isRemote) {
         options.setStartupPreference("server");
 
-        if (remoteType === "openwork") {
-          const hostUrl = next.openworkHostUrl?.trim() ?? "";
+        if (remoteType === "maya") {
+          const hostUrl = next.mayaHostUrl?.trim() ?? "";
           if (!hostUrl) {
-            options.setError("OpenWork server URL is required.");
+            options.setError("MAYA server URL is required.");
             updateWorkspaceConnectionState(id, {
               status: "error",
-              message: "OpenWork server URL is required.",
+              message: "MAYA server URL is required.",
             });
             return false;
           }
 
-          const workspaceToken = next.openworkToken?.trim() ?? "";
-          const fallbackToken = options.openworkServerSettings().token ?? "";
+          const workspaceToken = next.mayaToken?.trim() ?? "";
+          const fallbackToken = options.mayaServerSettings().token ?? "";
           const token = workspaceToken || fallbackToken;
 
-          const currentSettings = options.openworkServerSettings();
+          const currentSettings = options.mayaServerSettings();
           if (
             currentSettings.urlOverride?.trim() !== hostUrl ||
             (token && currentSettings.token?.trim() !== token)
@@ -781,14 +781,14 @@ export function createWorkspaceStore(options: {
             const resolved = await resolveOpenworkHost({
               hostUrl,
               token,
-              workspaceId: next.openworkWorkspaceId ?? null,
+              workspaceId: next.mayaWorkspaceId ?? null,
               directoryHint: next.directory ?? null,
             });
-            if (resolved.kind !== "openwork") {
-              options.setError("OpenWork server unavailable. Check the URL and token.");
+            if (resolved.kind !== "maya") {
+              options.setError("MAYA server unavailable. Check the URL and token.");
               updateWorkspaceConnectionState(id, {
                 status: "error",
-                message: "OpenWork server unavailable. Check the URL and token.",
+                message: "MAYA server unavailable. Check the URL and token.",
               });
               return false;
             }
@@ -820,7 +820,7 @@ export function createWorkspaceStore(options: {
               workspaceId: next.id,
               workspaceType: next.workspaceType,
               targetRoot: resolvedDirectory ?? "",
-              reason: "workspace-switch-openwork",
+              reason: "workspace-switch-maya",
             },
             resolvedAuth,
             { navigate: false },
@@ -838,13 +838,13 @@ export function createWorkspaceStore(options: {
             try {
               const ws = await workspaceUpdateRemote({
                 workspaceId: next.id,
-                remoteType: "openwork",
+                remoteType: "maya",
                 baseUrl: resolvedBaseUrl,
                 directory: resolvedDirectory || null,
-                openworkHostUrl: hostUrl,
-                openworkToken: token ? token : null,
-                openworkWorkspaceId: workspaceInfo?.id ?? next.openworkWorkspaceId ?? null,
-                openworkWorkspaceName: workspaceInfo?.name ?? next.openworkWorkspaceName ?? null,
+                mayaHostUrl: hostUrl,
+                mayaToken: token ? token : null,
+                mayaWorkspaceId: workspaceInfo?.id ?? next.mayaWorkspaceId ?? null,
+                mayaWorkspaceName: workspaceInfo?.name ?? next.mayaWorkspaceName ?? null,
               });
               setWorkspaces(ws.workspaces);
               syncActiveWorkspaceId(ws.activeId);
@@ -852,7 +852,7 @@ export function createWorkspaceStore(options: {
               // ignore
             }
           } else {
-            // In web mode, we still need to persist the resolved OpenWork connection
+            // In web mode, we still need to persist the resolved MAYA connection
             // details onto the workspace entry so that the sidebar can list sessions
             // for multiple remotes at once (without relying on global server settings).
             const resolvedToken = token.trim();
@@ -861,13 +861,13 @@ export function createWorkspaceStore(options: {
                 if (ws.id !== next.id) return ws;
                 return {
                   ...ws,
-                  remoteType: "openwork",
+                  remoteType: "maya",
                   baseUrl: resolvedBaseUrl.replace(/\/+$/, ""),
                   directory: resolvedDirectory || null,
-                  openworkHostUrl: hostUrl,
-                  openworkToken: resolvedToken || null,
-                  openworkWorkspaceId: workspaceInfo?.id ?? ws.openworkWorkspaceId ?? null,
-                  openworkWorkspaceName: workspaceInfo?.name ?? ws.openworkWorkspaceName ?? null,
+                  mayaHostUrl: hostUrl,
+                  mayaToken: resolvedToken || null,
+                  mayaWorkspaceId: workspaceInfo?.id ?? ws.mayaWorkspaceId ?? null,
+                  mayaWorkspaceName: workspaceInfo?.name ?? ws.mayaWorkspaceName ?? null,
                 };
               }),
             );
@@ -1031,7 +1031,7 @@ export function createWorkspaceStore(options: {
         existingEngineProjectDir: existingEngine?.projectDir ?? null,
       });
 
-      if (canReuseHost && runtime === "openwork-orchestrator") {
+      if (canReuseHost && runtime === "maya-orchestrator") {
         try {
           const reuseStart = Date.now();
           await orchestratorWorkspaceActivate({
@@ -1091,7 +1091,7 @@ export function createWorkspaceStore(options: {
 
       try {
         const runtime = resolveEngineRuntime();
-        if (runtime === "openwork-orchestrator") {
+        if (runtime === "maya-orchestrator") {
           await orchestratorWorkspaceActivate({
             workspacePath: next.path,
             name: next.displayName?.trim() || next.name?.trim() || null,
@@ -1483,8 +1483,8 @@ export function createWorkspaceStore(options: {
         { key: "docker", label: "Docker ready", status: "active", detail: null },
         { key: "workspace", label: "Prepare worker", status: "pending", detail: null },
         { key: "sandbox", label: "Start sandbox services", status: "pending", detail: null },
-        { key: "health", label: "Wait for OpenWork", status: "pending", detail: null },
-        { key: "connect", label: "Connect in OpenWork", status: "pending", detail: null },
+        { key: "health", label: "Wait for MAYA", status: "pending", detail: null },
+        { key: "connect", label: "Connect in MAYA", status: "pending", detail: null },
       ],
     });
 
@@ -1536,7 +1536,7 @@ export function createWorkspaceStore(options: {
       setSandboxStep("workspace", { status: "active", detail: name });
       pushSandboxCreateLog(`Worker: ${resolvedFolder}`);
 
-      // Ensure the workspace folder has baseline OpenWork/OpenCode files.
+      // Ensure the workspace folder has baseline MAYA/OpenCode files.
       const created = await workspaceCreate({ folderPath: resolvedFolder, name, preset });
       setWorkspaces(created.workspaces);
       syncActiveWorkspaceId(created.activeId);
@@ -1557,7 +1557,7 @@ export function createWorkspaceStore(options: {
       let stopListen: (() => void) | null = null;
       try {
         stopListen = await listen(
-          "openwork://sandbox-create-progress",
+          "maya://sandbox-create-progress",
           (event: TauriEvent<{ runId?: string; stage?: string; message?: string; payload?: any }>) => {
             const payload = event.payload ?? {};
             if ((payload.runId ?? "").trim() !== runId) return;
@@ -1576,7 +1576,7 @@ export function createWorkspaceStore(options: {
             }
 
             if (stage === "docker.config") {
-              const selected = String(payload.payload?.openworkDockerBin ?? "").trim();
+              const selected = String(payload.payload?.mayaDockerBin ?? "").trim();
               if (selected) {
                 pushSandboxCreateLog(`OPENWORK_DOCKER_BIN=${selected}`);
               }
@@ -1596,7 +1596,7 @@ export function createWorkspaceStore(options: {
               }
             }
 
-            if (stage === "openwork.waiting") {
+            if (stage === "maya.waiting") {
               const elapsedMs = Number(payload.payload?.elapsedMs ?? 0);
               const seconds = elapsedMs > 0 ? Math.max(1, Math.floor(elapsedMs / 1000)) : 0;
               setSandboxStep("health", { status: "active", detail: seconds ? `${seconds}s` : null });
@@ -1606,7 +1606,7 @@ export function createWorkspaceStore(options: {
               }
             }
 
-            if (stage === "openwork.healthy") {
+            if (stage === "maya.healthy") {
               setSandboxStep("sandbox", { status: "done" });
               setSandboxStep("health", { status: "done", detail: null });
             }
@@ -1634,8 +1634,8 @@ export function createWorkspaceStore(options: {
         markOnboardingComplete();
 
         const ok = await createRemoteWorkspaceFlow({
-          openworkHostUrl: host.openworkUrl,
-          openworkToken: host.token,
+          mayaHostUrl: host.mayaUrl,
+          mayaToken: host.token,
           directory: resolvedFolder,
           displayName: name,
           sandboxBackend: host.sandboxBackend ?? "docker",
@@ -1681,8 +1681,8 @@ export function createWorkspaceStore(options: {
   }
 
   async function createRemoteWorkspaceFlow(input: {
-    openworkHostUrl?: string | null;
-    openworkToken?: string | null;
+    mayaHostUrl?: string | null;
+    mayaToken?: string | null;
     directory?: string | null;
     displayName?: string | null;
     manageBusy?: boolean;
@@ -1695,15 +1695,15 @@ export function createWorkspaceStore(options: {
   }) {
     if (createRemoteInFlight) {
       wsDebug("create-remote:dedupe", {
-        hostUrl: input.openworkHostUrl ?? null,
+        hostUrl: input.mayaHostUrl ?? null,
         directory: input.directory ?? null,
       });
       return createRemoteInFlight;
     }
 
     const run = (async () => {
-    const hostUrl = normalizeOpenworkServerUrl(input.openworkHostUrl ?? "") ?? "";
-    const token = input.openworkToken?.trim() ?? "";
+    const hostUrl = normalizeOpenworkServerUrl(input.mayaHostUrl ?? "") ?? "";
+    const token = input.mayaToken?.trim() ?? "";
     const directory = input.directory?.trim() ?? "";
     const displayName = input.displayName?.trim() || null;
 
@@ -1721,15 +1721,15 @@ export function createWorkspaceStore(options: {
 
     options.setStartupPreference("server");
 
-    let remoteType: "openwork" = "openwork";
+    let remoteType: "maya" = "maya";
     let resolvedBaseUrl = "";
     let resolvedDirectory = directory;
-    let openworkWorkspace: OpenworkWorkspaceInfo | null = null;
+    let mayaWorkspace: OpenworkWorkspaceInfo | null = null;
     let resolvedAuth: OpencodeAuth | undefined = undefined;
     let resolvedHostUrl = hostUrl;
 
     options.updateOpenworkServerSettings({
-      ...options.openworkServerSettings(),
+      ...options.mayaServerSettings(),
       urlOverride: hostUrl,
       token: token || undefined,
     });
@@ -1748,30 +1748,30 @@ export function createWorkspaceStore(options: {
         if (input.sandboxBackend !== "docker") {
           throw error;
         }
-        wsDebug("sandbox:openwork-resolve-fallback:error", {
+        wsDebug("sandbox:maya-resolve-fallback:error", {
           hostUrl,
           message: error instanceof Error ? error.message : safeStringify(error),
         });
       }
 
-      if (resolved?.kind === "openwork") {
+      if (resolved?.kind === "maya") {
         resolvedBaseUrl = resolved.opencodeBaseUrl;
         resolvedDirectory = resolved.directory || directory;
-        openworkWorkspace = resolved.workspace;
+        mayaWorkspace = resolved.workspace;
         resolvedHostUrl = resolved.hostUrl;
         resolvedAuth = resolved.auth;
       } else if (input.sandboxBackend === "docker") {
         resolvedHostUrl = hostUrl;
         resolvedBaseUrl = `${hostUrl.replace(/\/+$/, "")}/opencode`;
         resolvedDirectory = directory || resolvedDirectory;
-        resolvedAuth = token ? { token, mode: "openwork" } : undefined;
-        wsDebug("sandbox:openwork-resolve-fallback:host", {
+        resolvedAuth = token ? { token, mode: "maya" } : undefined;
+        wsDebug("sandbox:maya-resolve-fallback:host", {
           hostUrl: resolvedHostUrl,
           baseUrl: resolvedBaseUrl,
           directory: resolvedDirectory,
         });
       } else {
-        options.setError("OpenWork server unavailable. Check the URL and token.");
+        options.setError("MAYA server unavailable. Check the URL and token.");
         return false;
       }
     } catch (error) {
@@ -1816,10 +1816,10 @@ export function createWorkspaceStore(options: {
           directory: finalDirectory ? finalDirectory : null,
           displayName,
           remoteType,
-          openworkHostUrl: remoteType === "openwork" ? resolvedHostUrl : null,
-          openworkToken: remoteType === "openwork" ? (token || null) : null,
-          openworkWorkspaceId: remoteType === "openwork" ? openworkWorkspace?.id ?? null : null,
-          openworkWorkspaceName: remoteType === "openwork" ? openworkWorkspace?.name ?? null : null,
+          mayaHostUrl: remoteType === "maya" ? resolvedHostUrl : null,
+          mayaToken: remoteType === "maya" ? (token || null) : null,
+          mayaWorkspaceId: remoteType === "maya" ? mayaWorkspace?.id ?? null : null,
+          mayaWorkspaceName: remoteType === "maya" ? mayaWorkspace?.name ?? null : null,
           sandboxBackend: input.sandboxBackend ?? null,
           sandboxRunId: input.sandboxRunId ?? null,
           sandboxContainerName: input.sandboxContainerName ?? null,
@@ -1831,7 +1831,7 @@ export function createWorkspaceStore(options: {
         const workspaceId = `remote:${resolvedBaseUrl}:${finalDirectory}`;
         const nextWorkspace: WorkspaceInfo = {
           id: workspaceId,
-          name: displayName ?? openworkWorkspace?.name ?? resolvedHostUrl ?? resolvedBaseUrl,
+          name: displayName ?? mayaWorkspace?.name ?? resolvedHostUrl ?? resolvedBaseUrl,
           path: "",
           preset: "remote",
           workspaceType: "remote",
@@ -1839,10 +1839,10 @@ export function createWorkspaceStore(options: {
           baseUrl: resolvedBaseUrl,
           directory: finalDirectory || null,
           displayName,
-          openworkHostUrl: remoteType === "openwork" ? resolvedHostUrl : null,
-          openworkToken: remoteType === "openwork" ? (token || null) : null,
-          openworkWorkspaceId: remoteType === "openwork" ? openworkWorkspace?.id ?? null : null,
-          openworkWorkspaceName: remoteType === "openwork" ? openworkWorkspace?.name ?? null : null,
+          mayaHostUrl: remoteType === "maya" ? resolvedHostUrl : null,
+          mayaToken: remoteType === "maya" ? (token || null) : null,
+          mayaWorkspaceId: remoteType === "maya" ? mayaWorkspace?.id ?? null : null,
+          mayaWorkspaceName: remoteType === "maya" ? mayaWorkspace?.name ?? null : null,
           sandboxBackend: input.sandboxBackend ?? null,
           sandboxRunId: input.sandboxRunId ?? null,
           sandboxContainerName: input.sandboxContainerName ?? null,
@@ -1898,8 +1898,8 @@ export function createWorkspaceStore(options: {
   async function updateRemoteWorkspaceFlow(
     workspaceId: string,
     input: {
-      openworkHostUrl?: string | null;
-      openworkToken?: string | null;
+      mayaHostUrl?: string | null;
+      mayaToken?: string | null;
       directory?: string | null;
       displayName?: string | null;
     },
@@ -1910,19 +1910,19 @@ export function createWorkspaceStore(options: {
     if (!workspace || workspace.workspaceType !== "remote") return false;
 
     const remoteType = normalizeRemoteType(workspace.remoteType);
-    if (remoteType !== "openwork") {
-      options.setError("Only OpenWork remote workers can be edited.");
+    if (remoteType !== "maya") {
+      options.setError("Only MAYA remote workers can be edited.");
       return false;
     }
 
     const hostUrl =
       normalizeOpenworkServerUrl(
-        input.openworkHostUrl ?? workspace.openworkHostUrl ?? workspace.baseUrl ?? "",
+        input.mayaHostUrl ?? workspace.mayaHostUrl ?? workspace.baseUrl ?? "",
       ) ?? "";
     const token =
-      input.openworkToken?.trim() ??
-      workspace.openworkToken?.trim() ??
-      options.openworkServerSettings().token ??
+      input.mayaToken?.trim() ??
+      workspace.mayaToken?.trim() ??
+      options.mayaServerSettings().token ??
       "";
     const directory = input.directory?.trim() ?? "";
     const displayName = input.displayName?.trim() || null;
@@ -1937,12 +1937,12 @@ export function createWorkspaceStore(options: {
 
     let resolvedBaseUrl = "";
     let resolvedDirectory = directory;
-    let openworkWorkspace: OpenworkWorkspaceInfo | null = null;
+    let mayaWorkspace: OpenworkWorkspaceInfo | null = null;
     let resolvedAuth: OpencodeAuth | undefined = undefined;
     let resolvedHostUrl = hostUrl;
 
     options.updateOpenworkServerSettings({
-      ...options.openworkServerSettings(),
+      ...options.mayaServerSettings(),
       urlOverride: hostUrl,
       token: token || undefined,
     });
@@ -1951,16 +1951,16 @@ export function createWorkspaceStore(options: {
       const resolved = await resolveOpenworkHost({
         hostUrl,
         token,
-        workspaceId: workspace.openworkWorkspaceId ?? null,
+        workspaceId: workspace.mayaWorkspaceId ?? null,
         directoryHint: directory || null,
       });
-      if (resolved.kind !== "openwork") {
-        options.setError("OpenWork server unavailable. Check the URL and token.");
+      if (resolved.kind !== "maya") {
+        options.setError("MAYA server unavailable. Check the URL and token.");
         return false;
       }
       resolvedBaseUrl = resolved.opencodeBaseUrl;
       resolvedDirectory = resolved.directory || directory;
-      openworkWorkspace = resolved.workspace;
+      mayaWorkspace = resolved.workspace;
       resolvedHostUrl = resolved.hostUrl;
       resolvedAuth = resolved.auth;
     } catch (error) {
@@ -2003,14 +2003,14 @@ export function createWorkspaceStore(options: {
       try {
         const ws = await workspaceUpdateRemote({
           workspaceId: id,
-          remoteType: "openwork",
+          remoteType: "maya",
           baseUrl: resolvedBaseUrl,
           directory: finalDirectory ? finalDirectory : null,
           displayName,
-          openworkHostUrl: resolvedHostUrl,
-          openworkToken: token ? token : null,
-          openworkWorkspaceId: openworkWorkspace?.id ?? workspace.openworkWorkspaceId ?? null,
-          openworkWorkspaceName: openworkWorkspace?.name ?? workspace.openworkWorkspaceName ?? null,
+          mayaHostUrl: resolvedHostUrl,
+          mayaToken: token ? token : null,
+          mayaWorkspaceId: mayaWorkspace?.id ?? workspace.mayaWorkspaceId ?? null,
+          mayaWorkspaceName: mayaWorkspace?.name ?? workspace.mayaWorkspaceName ?? null,
         });
         setWorkspaces(ws.workspaces);
         syncActiveWorkspaceId(ws.activeId);
@@ -2023,14 +2023,14 @@ export function createWorkspaceStore(options: {
           item.id === id
             ? {
                 ...item,
-                remoteType: "openwork",
+                remoteType: "maya",
                 baseUrl: resolvedBaseUrl,
                 directory: finalDirectory ? finalDirectory : null,
                 displayName,
-                openworkHostUrl: resolvedHostUrl,
-                openworkToken: token ? token : null,
-                openworkWorkspaceId: openworkWorkspace?.id ?? item.openworkWorkspaceId ?? null,
-                openworkWorkspaceName: openworkWorkspace?.name ?? item.openworkWorkspaceName ?? null,
+                mayaHostUrl: resolvedHostUrl,
+                mayaToken: token ? token : null,
+                mayaWorkspaceId: mayaWorkspace?.id ?? item.mayaWorkspaceId ?? null,
+                mayaWorkspaceName: mayaWorkspace?.name ?? item.mayaWorkspaceName ?? null,
               }
             : item,
         ),
@@ -2141,29 +2141,29 @@ export function createWorkspaceStore(options: {
         workspacePath,
         sandboxBackend: "docker",
         runId: workspace.sandboxRunId?.trim() || null,
-        openworkToken:
-          workspace.openworkToken?.trim() || options.openworkServerSettings().token?.trim() || null,
+        mayaToken:
+          workspace.mayaToken?.trim() || options.mayaServerSettings().token?.trim() || null,
       });
 
       const resolved = await resolveOpenworkHost({
-        hostUrl: host.openworkUrl,
+        hostUrl: host.mayaUrl,
         token: host.token,
         directoryHint: workspacePath,
       });
 
-      if (resolved.kind !== "openwork") {
+      if (resolved.kind !== "maya") {
         throw new Error("Worker is still warming up. Try again in a few seconds.");
       }
 
       const updated = await workspaceUpdateRemote({
         workspaceId: id,
-        remoteType: "openwork",
+        remoteType: "maya",
         baseUrl: resolved.opencodeBaseUrl,
         directory: resolved.directory || workspacePath,
-        openworkHostUrl: resolved.hostUrl,
-        openworkToken: host.token,
-        openworkWorkspaceId: resolved.workspace.id,
-        openworkWorkspaceName: resolved.workspace.name ?? workspace.openworkWorkspaceName ?? null,
+        mayaHostUrl: resolved.hostUrl,
+        mayaToken: host.token,
+        mayaWorkspaceId: resolved.workspace.id,
+        mayaWorkspaceName: resolved.workspace.name ?? workspace.mayaWorkspaceName ?? null,
         sandboxBackend: host.sandboxBackend ?? "docker",
         sandboxRunId: host.sandboxRunId ?? workspace.sandboxRunId ?? null,
         sandboxContainerName: host.sandboxContainerName ?? workspace.sandboxContainerName ?? null,
@@ -2293,14 +2293,14 @@ export function createWorkspaceStore(options: {
         .replace(/^-+|-+$/g, "")
         .slice(0, 60);
       const dateStamp = new Date().toISOString().slice(0, 10);
-      const fileName = `openwork-${nameBase || "worker"}-${dateStamp}.openwork-workspace`;
+      const fileName = `maya-${nameBase || "worker"}-${dateStamp}.maya-workspace`;
       const downloads = await downloadDir().catch(() => null);
       const defaultPath = downloads ? `${downloads}/${fileName}` : fileName;
 
       const outputPath = await saveFile({
         title: "Export worker config",
         defaultPath,
-        filters: [{ name: "OpenWork Worker", extensions: ["openwork-workspace", "zip"] }],
+        filters: [{ name: "MAYA Worker", extensions: ["maya-workspace", "zip"] }],
       });
 
       if (!outputPath) {
@@ -2332,7 +2332,7 @@ export function createWorkspaceStore(options: {
     try {
       const selection = await pickFile({
         title: "Import worker config",
-        filters: [{ name: "OpenWork Worker", extensions: ["openwork-workspace", "zip"] }],
+        filters: [{ name: "MAYA Worker", extensions: ["maya-workspace", "zip"] }],
       });
       const filePath =
         typeof selection === "string" ? selection : Array.isArray(selection) ? selection[0] : null;
@@ -2508,7 +2508,7 @@ export function createWorkspaceStore(options: {
       if (!result.found) {
         options.setError(
           options.isWindowsPlatform()
-            ? "OpenCode CLI not found. Install OpenCode for Windows or bundle opencode.exe with OpenWork, then restart. If it is installed, ensure `opencode.exe` is on PATH (try `opencode --version` in PowerShell)."
+            ? "OpenCode CLI not found. Install OpenCode for Windows or bundle opencode.exe with MAYA, then restart. If it is installed, ensure `opencode.exe` is on PATH (try `opencode --version` in PowerShell)."
             : "OpenCode CLI not found. Install with `brew install anomalyco/tap/opencode` or `curl -fsSL https://opencode.ai/install | bash`, then retry.",
         );
         return false;
@@ -2677,7 +2677,7 @@ export function createWorkspaceStore(options: {
 
     try {
       const runtime = engine()?.runtime ?? resolveEngineRuntime();
-      if (runtime === "openwork-orchestrator") {
+      if (runtime === "maya-orchestrator") {
         await orchestratorInstanceDispose(root);
         await orchestratorWorkspaceActivate({
           workspacePath: root,
@@ -2815,7 +2815,7 @@ export function createWorkspaceStore(options: {
   function markOnboardingComplete() {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem("openwork.onboardingComplete", "1");
+      window.localStorage.setItem("maya.onboardingComplete", "1");
     } catch {
       // ignore
     }
@@ -2924,7 +2924,7 @@ export function createWorkspaceStore(options: {
     const startupPref = readStartupPreference();
     const onboardingComplete = (() => {
       try {
-        return window.localStorage.getItem("openwork.onboardingComplete") === "1";
+        return window.localStorage.getItem("maya.onboardingComplete") === "1";
       } catch {
         return false;
       }
@@ -3075,10 +3075,10 @@ export function createWorkspaceStore(options: {
   async function onConnectClient() {
     options.setStartupPreference("server");
     options.setOnboardingStep("connecting");
-    const settings = options.openworkServerSettings();
+    const settings = options.mayaServerSettings();
     const ok = await createRemoteWorkspaceFlow({
-      openworkHostUrl: settings.urlOverride ?? null,
-      openworkToken: settings.token ?? null,
+      mayaHostUrl: settings.urlOverride ?? null,
+      mayaToken: settings.token ?? null,
       directory: options.clientDirectory().trim() ? options.clientDirectory().trim() : null,
       displayName: null,
     });

@@ -336,7 +336,7 @@ export default function SkillsView(props: SkillsViewProps) {
         const name = typeof json.name === "string" ? json.name.trim() : "";
         const content = typeof json.content === "string" ? json.content : "";
         if (schemaVersion !== 1 || type !== "skill") {
-          throw new Error("This link is not an OpenWork skill bundle");
+          throw new Error("This link is not an MAYA skill bundle");
         }
         if (!name) throw new Error("Bundle is missing a skill name");
         if (!content) throw new Error("Bundle is missing skill content");
@@ -641,7 +641,7 @@ export default function SkillsView(props: SkillsViewProps) {
                         <h4 class="text-sm font-semibold text-dls-text truncate">{skill.name}</h4>
                         <Show when={isOpenworkInjectedSkill(skill)}>
                           <span class="rounded-full border border-dls-border bg-dls-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dls-secondary">
-                            OpenWork
+                            MAYA
                           </span>
                         </Show>
                       </div>
@@ -751,7 +751,7 @@ export default function SkillsView(props: SkillsViewProps) {
                       <div class="flex items-center gap-2 mb-0.5">
                         <h4 class="text-sm font-semibold text-dls-text truncate">{skill.name}</h4>
                       </div>
-                      <Show when={skill.description} fallback={<p class="text-xs text-dls-secondary">From openwork-hub</p>}>
+                      <Show when={skill.description} fallback={<p class="text-xs text-dls-secondary">From maya-hub</p>}>
                         <p class="text-xs text-dls-secondary line-clamp-2">{skill.description}</p>
                       </Show>
                       <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-dls-secondary">
@@ -1046,7 +1046,7 @@ export default function SkillsView(props: SkillsViewProps) {
                   type="url"
                   value={installLinkUrl()}
                   onInput={(e) => setInstallLinkUrl(e.currentTarget.value)}
-                  placeholder="https://share.openwork.software/b/..."
+                  placeholder="https://share.maya.software/b/..."
                   class="w-full bg-dls-hover border border-dls-border rounded-lg px-3 py-2 text-xs font-mono text-dls-text focus:outline-none"
                   spellcheck={false}
                 />

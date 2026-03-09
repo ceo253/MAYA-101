@@ -3,12 +3,12 @@ set -euo pipefail
 
 # Bring up a dev stack with random host ports.
 #
-# Usage (from _repos/openwork repo root):
+# Usage (from _repos/maya repo root):
 #   packaging/docker/dev-up.sh
 #
 # Outputs:
 # - Web UI URL
-# - OpenWork server URL
+# - MAYA server URL
 # - Token file path
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -106,7 +106,7 @@ pick_port() {
 }
 
 DEV_ID="$(node -e "console.log(require('crypto').randomUUID().slice(0, 8))")"
-PROJECT="openwork-dev-$DEV_ID"
+PROJECT="maya-dev-$DEV_ID"
 
 mkdir -p "$WORKSPACE_DIR"
 mkdir -p "$DEV_RUNTIME_DIR"
@@ -165,8 +165,8 @@ if ! start_stack "$ACTIVE_OPENCODE_CONFIG_DIR" "$ACTIVE_OPENCODE_DATA_DIR"; then
 fi
 
 echo "" >&2
-echo "OpenWork web UI:     http://localhost:$WEB_PORT" >&2
-echo "OpenWork server:     http://localhost:$OPENWORK_PORT" >&2
+echo "MAYA web UI:     http://localhost:$WEB_PORT" >&2
+echo "MAYA server:     http://localhost:$OPENWORK_PORT" >&2
 echo "Token file:          $ROOT_DIR/tmp/.dev-env-$DEV_ID" >&2
 echo "" >&2
 echo "To stop this stack:" >&2

@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Download, RefreshCw, UploadCloud } from "lucide-solid";
 
-import type { OpenworkInboxItem, OpenworkServerClient } from "../../lib/openwork-server";
+import type { OpenworkInboxItem, OpenworkServerClient } from "../../lib/maya-server";
 import { formatBytes, formatRelativeTime } from "../../utils";
 
 export type InboxPanelProps = {
@@ -12,7 +12,7 @@ export type InboxPanelProps = {
   maxPreview?: number;
 };
 
-const INBOX_PREFIX = ".opencode/openwork/inbox/";
+const INBOX_PREFIX = ".opencode/maya/inbox/";
 
 function safeName(item: OpenworkInboxItem): string {
   return String(item.name ?? item.path ?? "file").trim() || "file";

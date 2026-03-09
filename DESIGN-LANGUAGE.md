@@ -1,8 +1,8 @@
-# OpenWork Design Language
+# MAYA Design Language
 
-This is the default visual language for OpenWork product and marketing work unless a task explicitly asks for a different direction.
+This is the default visual language for MAYA product and marketing work unless a task explicitly asks for a different direction.
 
-The goal is not generic SaaS polish. OpenWork should feel like calm, premium operational software: clear, light, slightly futuristic, and trustworthy enough for real work.
+The goal is not generic SaaS polish. MAYA should feel like calm, premium operational software: clear, light, slightly futuristic, and trustworthy enough for real work.
 
 ## Shared DNA
 
@@ -96,7 +96,7 @@ Use this as the default starting point when building new UI in this language.
 }
 ```
 
-## OpenWork App
+## MAYA App
 
 The app is not a marketing page. It should feel more operational, more focused, and more durable.
 
@@ -175,7 +175,7 @@ The app is not a marketing page. It should feel more operational, more focused, 
 - Are rails visually related but clearly separated?
 - Is long-form assistant output comfortable to read for several paragraphs?
 
-## OpenWork Landing
+## MAYA Landing
 
 The landing experience should feel like the same company as the app, but more cinematic, more spacious, and more persuasive.
 
@@ -294,7 +294,7 @@ When building a landing enterprise page in this language, use this structure:
 
 ### Landing implementation checklist
 
-- Does the page feel like OpenWork before reading any copy?
+- Does the page feel like MAYA before reading any copy?
 - Is there exactly one dominant CTA in each section?
 - Are gradients contained to moments of emphasis rather than spread everywhere?
 - Is the raster accent used sparingly and intentionally?
@@ -321,7 +321,7 @@ When building a landing enterprise page in this language, use this structure:
 
 ## Build Order
 
-When creating a new OpenWork UI from scratch, implement in this order:
+When creating a new MAYA UI from scratch, implement in this order:
 
 1. Establish background field and shell width.
 2. Set typography system and only then choose the raster accent moment.

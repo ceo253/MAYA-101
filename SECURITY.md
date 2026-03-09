@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-OpenWork is under active development and we prioritize fixes on the latest release and
+MAYA is under active development and we prioritize fixes on the latest release and
 the current `dev` branch.
 
 ## Reporting a vulnerability
@@ -12,7 +12,7 @@ Please do not open public GitHub issues for security vulnerabilities.
 Instead, report vulnerabilities privately to:
 
 - Email: `benjamin.shafii@gmail.com`
-- Subject: `[OpenWork security] <short summary>`
+- Subject: `[MAYA security] <short summary>`
 
 Please include:
 

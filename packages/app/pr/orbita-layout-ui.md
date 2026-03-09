@@ -29,8 +29,8 @@ Branch: `task/orbita-layout-ui`
 
 ## Verification
 
-- `pnpm --filter @different-ai/openwork-ui typecheck`
-- `pnpm --filter @different-ai/openwork-ui build`
-- `pnpm --filter @different-ai/openwork-ui test:health` (fails in this environment: `Unauthorized` waiting for `/global/health`)
+- `pnpm --filter @different-ai/maya-ui typecheck`
+- `pnpm --filter @different-ai/maya-ui build`
+- `pnpm --filter @different-ai/maya-ui test:health` (fails in this environment: `Unauthorized` waiting for `/global/health`)
 - `packaging/docker/dev-up.sh`
 - Chrome MCP: open printed Docker URL `http://localhost:57465/session`, send `smoke: hello from chrome mcp`, verify response rendered (`Hello! How can I help you today?`).

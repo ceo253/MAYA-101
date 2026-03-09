@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import { OpenWorkMark } from "./openwork-mark";
+import { MAYAMark } from "./maya-mark";
 
 type Props = {
   stars: string;
@@ -39,9 +39,9 @@ export function SiteNav(props: Props) {
             className="group inline-flex items-center gap-2"
             onClick={() => setMobileOpen(false)}
           >
-            <OpenWorkMark className="h-[30px] w-[38px] text-[#011627] transition-opacity group-hover:opacity-80" />
+            <MAYAMark className="h-[30px] w-[38px] text-[#011627] transition-opacity group-hover:opacity-80" />
             <span className="text-[1.2rem] font-semibold tracking-tight text-[#011627] lowercase md:text-[1.3rem]">
-              OpenWork
+              MAYA
             </span>
           </Link>
 
@@ -67,11 +67,11 @@ export function SiteNav(props: Props) {
               Download for free
             </a>
             <a
-              href="https://github.com/different-ai/openwork"
+              href="https://github.com/different-ai/maya"
               className="hidden items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-[14px] font-medium text-slate-600 shadow-sm transition-colors hover:text-[#011627] sm:flex"
               rel="noreferrer"
               target="_blank"
-              aria-label="OpenWork GitHub stars"
+              aria-label="MAYA GitHub stars"
             >
               <svg
                 className="h-4 w-4"
@@ -132,7 +132,7 @@ export function SiteNav(props: Props) {
                 Book a call
               </a>
               <a
-                href="https://github.com/different-ai/openwork"
+                href="https://github.com/different-ai/maya"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:text-[#011627]"
                 rel="noreferrer"
                 target="_blank"

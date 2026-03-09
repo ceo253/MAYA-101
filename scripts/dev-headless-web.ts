@@ -101,30 +101,30 @@ const viteHost = process.env.VITE_HOST ?? process.env.HOST ?? host;
 const publicHost = process.env.OPENWORK_PUBLIC_HOST ?? null;
 const clientHost = publicHost ?? (host === "0.0.0.0" ? "127.0.0.1" : host);
 const workspace = process.env.OPENWORK_WORKSPACE ?? cwd;
-const openworkPort = await resolvePort(process.env.OPENWORK_PORT, "127.0.0.1");
+const mayaPort = await resolvePort(process.env.OPENWORK_PORT, "127.0.0.1");
 const webPort = await resolvePort(process.env.OPENWORK_WEB_PORT, "127.0.0.1");
-const openworkToken = process.env.OPENWORK_TOKEN ?? randomUUID();
-const openworkHostToken = process.env.OPENWORK_HOST_TOKEN ?? randomUUID();
-const openworkServerBin = path.join(cwd, "packages/server/dist/bin/openwork-server");
+const mayaToken = process.env.OPENWORK_TOKEN ?? randomUUID();
+const mayaHostToken = process.env.OPENWORK_HOST_TOKEN ?? randomUUID();
+const mayaServerBin = path.join(cwd, "packages/server/dist/bin/maya-server");
 const opencodeRouterBin = path.join(cwd, "packages/opencode-router/dist/bin/opencode-router");
 
 const ensureOpenworkServer = async () => {
   try {
-    await access(openworkServerBin);
+    await access(mayaServerBin);
   } catch {
     if (!autoBuildEnabled) {
-      logLine(`[dev:headless-web] Missing OpenWork server binary at ${openworkServerBin}`);
+      logLine(`[dev:headless-web] Missing MAYA server binary at ${mayaServerBin}`);
       logLine("[dev:headless-web] Auto-build disabled (OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD=0)");
-      logLine("[dev:headless-web] Run: pnpm --filter openwork-server build:bin");
+      logLine("[dev:headless-web] Run: pnpm --filter maya-server build:bin");
       logLine("[dev:headless-web] Or unset/enable OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD to auto-build.");
       process.exit(1);
     }
 
-    logLine(`[dev:headless-web] Missing OpenWork server binary at ${openworkServerBin}`);
-    logLine("[dev:headless-web] Auto-building: pnpm --filter openwork-server build:bin");
+    logLine(`[dev:headless-web] Missing MAYA server binary at ${mayaServerBin}`);
+    logLine("[dev:headless-web] Auto-building: pnpm --filter maya-server build:bin");
     try {
-      await runCommand("pnpm", ["--filter", "openwork-server", "build:bin"]);
-      await access(openworkServerBin);
+      await runCommand("pnpm", ["--filter", "maya-server", "build:bin"]);
+      await access(mayaServerBin);
     } catch (error) {
       logLine(`[dev:headless-web] Auto-build failed: ${error instanceof Error ? error.message : String(error)}`);
       process.exit(1);
@@ -156,7 +156,7 @@ const ensureOpencodeRouter = async () => {
   }
 };
 
-const openworkUrl = `http://${clientHost}:${openworkPort}`;
+const mayaUrl = `http://${clientHost}:${mayaPort}`;
 const webUrl = `http://${clientHost}:${webPort}`;
 // In practice we want opencode-router on for end-to-end messaging tests.
 // Allow opt-out via OPENWORK_DEV_OPENCODE_ROUTER=0.
@@ -168,18 +168,18 @@ const viteEnv = {
   ...process.env,
   HOST: viteHost,
   PORT: String(webPort),
-  VITE_OPENWORK_URL: process.env.VITE_OPENWORK_URL ?? openworkUrl,
-  VITE_OPENWORK_PORT: process.env.VITE_OPENWORK_PORT ?? String(openworkPort),
-  VITE_OPENWORK_TOKEN: process.env.VITE_OPENWORK_TOKEN ?? openworkToken,
+  VITE_OPENWORK_URL: process.env.VITE_OPENWORK_URL ?? mayaUrl,
+  VITE_OPENWORK_PORT: process.env.VITE_OPENWORK_PORT ?? String(mayaPort),
+  VITE_OPENWORK_TOKEN: process.env.VITE_OPENWORK_TOKEN ?? mayaToken,
 };
 const headlessEnv = {
   ...process.env,
   OPENWORK_WORKSPACE: workspace,
   OPENWORK_HOST: host,
-  OPENWORK_PORT: String(openworkPort),
-  OPENWORK_TOKEN: openworkToken,
-  OPENWORK_HOST_TOKEN: openworkHostToken,
-  OPENWORK_SERVER_BIN: openworkServerBin,
+  OPENWORK_PORT: String(mayaPort),
+  OPENWORK_TOKEN: mayaToken,
+  OPENWORK_HOST_TOKEN: mayaHostToken,
+  OPENWORK_SERVER_BIN: mayaServerBin,
   OPENWORK_SIDECAR_SOURCE: process.env.OPENWORK_SIDECAR_SOURCE ?? "external",
   OPENCODE_ROUTER_BIN: process.env.OPENCODE_ROUTER_BIN ?? opencodeRouterBin,
 };
@@ -191,15 +191,15 @@ if (opencodeRouterEnabled) {
 
 logLine("[dev:headless-web] Starting services");
 logLine(`[dev:headless-web] Workspace: ${workspace}`);
-logLine(`[dev:headless-web] OpenWork server: ${openworkUrl}`);
+logLine(`[dev:headless-web] MAYA server: ${mayaUrl}`);
 logLine(`[dev:headless-web] Web host: ${viteHost}`);
 logLine(`[dev:headless-web] Web port: ${webPort}`);
 logLine(`[dev:headless-web] Web URL: ${webUrl}`);
 logLine(
   `[dev:headless-web] OpenCodeRouter: ${opencodeRouterEnabled ? "on" : "off"} (set OPENWORK_DEV_OPENCODE_ROUTER=0 to disable)`,
 );
-logLine(`[dev:headless-web] OPENWORK_TOKEN: ${openworkToken}`);
-logLine(`[dev:headless-web] OPENWORK_HOST_TOKEN: ${openworkHostToken}`);
+logLine(`[dev:headless-web] OPENWORK_TOKEN: ${mayaToken}`);
+logLine(`[dev:headless-web] OPENWORK_HOST_TOKEN: ${mayaHostToken}`);
 logLine(`[dev:headless-web] Web logs: ${path.relative(cwd, path.join(tmpDir, "dev-web.log"))}`);
 logLine(`[dev:headless-web] Headless logs: ${path.relative(cwd, path.join(tmpDir, "dev-headless.log"))}`);
 
@@ -207,7 +207,7 @@ const webProcess = spawnLogged(
   "pnpm",
   [
     "--filter",
-    "@different-ai/openwork-ui",
+    "@different-ai/maya-ui",
     "exec",
     "vite",
     "--host",
@@ -224,7 +224,7 @@ const headlessProcess = spawnLogged(
   "pnpm",
   [
     "--filter",
-    "openwork-orchestrator",
+    "maya-orchestrator",
     "dev",
     "--",
     "start",
@@ -237,14 +237,14 @@ const headlessProcess = spawnLogged(
     "--opencode-router",
     opencodeRouterEnabled ? "true" : "false",
     ...(opencodeRouterRequired ? ["--opencode-router-required"] : []),
-    "--openwork-host",
+    "--maya-host",
     host,
-    "--openwork-port",
-    String(openworkPort),
-    "--openwork-token",
-    openworkToken,
-    "--openwork-host-token",
-    openworkHostToken,
+    "--maya-port",
+    String(mayaPort),
+    "--maya-token",
+    mayaToken,
+    "--maya-host-token",
+    mayaHostToken,
   ],
   path.join(tmpDir, "dev-headless.log"),
   headlessEnv,

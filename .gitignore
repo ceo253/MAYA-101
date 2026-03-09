@@ -37,7 +37,7 @@ vendor/opencode/
 .opencode/node_modules/
 .opencode/bun.lock
 
-# OpenWork workspace-local artifacts
-.opencode/openwork/
+# MAYA workspace-local artifacts
+.opencode/maya/
 .vercel
 .env*.local

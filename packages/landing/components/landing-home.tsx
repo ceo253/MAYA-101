@@ -253,7 +253,7 @@ export function LandingHome(props: Props) {
             </h1>
             <p className="mb-6 text-lg leading-relaxed text-gray-700 md:mb-7 md:text-xl">
               Whether you&apos;re using Claude Code, Codex, OpenCode, or your own
-              stack, OpenWork turns it into a shareable desktop app your
+              stack, MAYA turns it into a shareable desktop app your
               non-technical coworkers can use.
             </p>
 
@@ -300,7 +300,7 @@ export function LandingHome(props: Props) {
                   <div className="h-3 w-3 rounded-full border border-[#1aab29]/20 bg-[#27c93f]/90 shadow-sm"></div>
                 </div>
                 <div className="absolute left-1/2 -translate-x-1/2 text-[12px] font-medium tracking-wide text-gray-500">
-                  OpenWork
+                  MAYA
                 </div>
               </div>
 
@@ -490,7 +490,7 @@ export function LandingHome(props: Props) {
           <section className="mt-4 md:mt-6">
             <div className="mb-10 grid gap-10 md:mb-12 md:grid-cols-2 md:gap-12">
               <div>
-                <h2 className="mb-3 text-2xl font-medium">OpenWork Desktop</h2>
+                <h2 className="mb-3 text-2xl font-medium">MAYA Desktop</h2>
                 <p className="mb-6 text-lg leading-relaxed text-gray-600">
                   Start free on desktop with no signup, then automate email,
                   Slack, and the work you do every day.
@@ -501,7 +501,7 @@ export function LandingHome(props: Props) {
               </div>
 
               <div>
-                <h2 className="mb-3 text-2xl font-medium">OpenWork Den</h2>
+                <h2 className="mb-3 text-2xl font-medium">MAYA Den</h2>
                 <p className="mb-6 text-lg leading-relaxed text-gray-600">
                   Run those same workers in the cloud when you need them always
                   on, without hosting them yourself.
@@ -517,7 +517,7 @@ export function LandingHome(props: Props) {
           </section>
 
           <section className="mt-4 max-w-3xl md:mt-6">
-            <div className="mb-4 font-medium text-gray-500">OpenWork Den</div>
+            <div className="mb-4 font-medium text-gray-500">MAYA Den</div>
             <h2 className="mb-6 text-4xl font-medium leading-[1.1] tracking-tight md:text-5xl lg:text-6xl">
               Hosted sandboxed workers
               <br />
@@ -591,7 +591,7 @@ export function LandingHome(props: Props) {
                     }`}
                   >
                     Give your team access to hosted, sandboxed workers via
-                    OpenWork Den. Run the exact same workflows safely in the
+                    MAYA Den. Run the exact same workflows safely in the
                     cloud without managing infrastructure.
                   </p>
                 </button>
@@ -615,7 +615,7 @@ export function LandingHome(props: Props) {
                       activeUseCase === 2 ? "text-[#011627]" : "text-gray-600"
                     }`}
                   >
-                    Run and monitor your shared workers from the OpenWork
+                    Run and monitor your shared workers from the MAYA
                     desktop app, or interact with them directly inside your
                     team&apos;s Slack or Telegram channels.
                   </p>
@@ -671,7 +671,7 @@ export function LandingHome(props: Props) {
                               </svg>
                             </div>
                             <div className="text-[15px] font-medium text-[#011627]">
-                              Drop OpenWork files here
+                              Drop MAYA files here
                             </div>
                             <div className="mt-1 text-[13px] text-gray-400">
                               or click to browse local files
@@ -754,7 +754,7 @@ export function LandingHome(props: Props) {
                                   type="button"
                                   className="rounded-full bg-[#011627] px-4 py-2 text-center text-xs font-medium text-white shadow-sm transition-colors hover:bg-black"
                                 >
-                                  Open in OpenWork
+                                  Open in MAYA
                                 </button>
                                 <button
                                   type="button"

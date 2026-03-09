@@ -1,25 +1,29 @@
 import { createSignal, createRoot } from "solid-js";
 import en from "./locales/en";
-import zh from "./locales/zh";
+import hi from "./locales/hi";
+import kn from "./locales/kn";
+import ta from "./locales/ta";
 import { LANGUAGE_PREF_KEY } from "../app/constants";
 
 /**
- * Supported languages - only en and zh for initial PR
+ * Supported languages
  */
-export type Language = "en" | "zh";
+export type Language = "en" | "hi" | "kn" | "ta";
 export type Locale = Language;
 
 /**
  * All supported languages - single source of truth
  */
-export const LANGUAGES: Language[] = ["en", "zh"];
+export const LANGUAGES: Language[] = ["en", "hi", "kn", "ta"];
 
 /**
  * Language options for UI - single source of truth
  */
 export const LANGUAGE_OPTIONS = [
   { value: "en" as Language, label: "English", nativeName: "English" },
-  { value: "zh" as Language, label: "简体中文", nativeName: "简体中文" },
+  { value: "hi" as Language, label: "Hindi", nativeName: "हिन्दी" },
+  { value: "kn" as Language, label: "Kannada", nativeName: "ಕನ್ನಡ" },
+  { value: "ta" as Language, label: "Tamil", nativeName: "தமிழ்" },
 ] as const;
 
 /**
@@ -27,7 +31,9 @@ export const LANGUAGE_OPTIONS = [
  */
 const TRANSLATIONS: Record<Language, Record<string, string>> = {
   en,
-  zh,
+  hi,
+  kn,
+  ta,
 };
 
 /**

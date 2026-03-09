@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { ChevronDown, ChevronRight, HeartPulse, Loader2, MoreHorizontal, Plus } from "lucide-solid";
 
-import type { OpenworkSoulStatus } from "../../lib/openwork-server";
+import type { OpenworkSoulStatus } from "../../lib/maya-server";
 import type { WorkspaceInfo } from "../../lib/tauri";
 import type { WorkspaceConnectionState, WorkspaceSessionGroup } from "../../types";
 import { formatRelativeTime, getWorkspaceTaskLoadErrorDisplay, isWindowsPlatform } from "../../utils";
@@ -37,7 +37,7 @@ const COLLAPSED_SESSIONS_PREVIEW = 1;
 
 const workspaceLabel = (workspace: WorkspaceInfo) =>
   workspace.displayName?.trim() ||
-  workspace.openworkWorkspaceName?.trim() ||
+  workspace.mayaWorkspaceName?.trim() ||
   workspace.name?.trim() ||
   workspace.path?.trim() ||
   "Worker";

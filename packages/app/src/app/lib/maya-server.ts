@@ -3,7 +3,7 @@ import { isTauriRuntime } from "../utils";
 import type { ScheduledJob } from "./tauri";
 
 export type OpenworkServerCapabilities = {
-  skills: { read: boolean; write: boolean; source: "openwork" | "opencode" };
+  skills: { read: boolean; write: boolean; source: "maya" | "opencode" };
   hub?: {
     skills?: {
       read: boolean;
@@ -413,7 +413,7 @@ export type OpenworkWorkspaceExport = {
   workspaceId: string;
   exportedAt: number;
   opencode?: Record<string, unknown>;
-  openwork?: Record<string, unknown>;
+  maya?: Record<string, unknown>;
   skills?: Array<{ name: string; description?: string; trigger?: string; content: string }>;
   commands?: Array<{ name: string; description?: string; template?: string }>;
 };
@@ -524,9 +524,9 @@ export type OpenworkReloadEvent = {
 
 export const DEFAULT_OPENWORK_SERVER_PORT = 8787;
 
-const STORAGE_URL_OVERRIDE = "openwork.server.urlOverride";
-const STORAGE_PORT_OVERRIDE = "openwork.server.port";
-const STORAGE_TOKEN = "openwork.server.token";
+const STORAGE_URL_OVERRIDE = "maya.server.urlOverride";
+const STORAGE_PORT_OVERRIDE = "maya.server.port";
+const STORAGE_TOKEN = "maya.server.token";
 
 export function normalizeOpenworkServerUrl(input: string) {
   const trimmed = input.trim();
@@ -584,7 +584,7 @@ export function buildOpenworkWorkspaceBaseUrl(hostUrl: string, workspaceId?: str
   }
 }
 
-export const DEFAULT_OPENWORK_CONNECT_APP_URL = "https://app.openwork.software";
+export const DEFAULT_OPENWORK_CONNECT_APP_URL = "https://app.maya.software";
 
 const OPENWORK_INVITE_PARAM_URL = "ow_url";
 const OPENWORK_INVITE_PARAM_TOKEN = "ow_token";
@@ -961,7 +961,7 @@ function buildHeaders(
     headers.Authorization = `Bearer ${token}`;
   }
   if (hostToken) {
-    headers["X-OpenWork-Host-Token"] = hostToken;
+    headers["X-MAYA-Host-Token"] = hostToken;
   }
   if (extra) {
     Object.assign(headers, extra);
@@ -975,7 +975,7 @@ function buildAuthHeaders(token?: string, hostToken?: string, extra?: Record<str
     headers.Authorization = `Bearer ${token}`;
   }
   if (hostToken) {
-    headers["X-OpenWork-Host-Token"] = hostToken;
+    headers["X-MAYA-Host-Token"] = hostToken;
   }
   if (extra) {
     Object.assign(headers, extra);
@@ -1223,7 +1223,7 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         timeoutMs: timeouts.workspaceImport,
       }),
     getConfig: (workspaceId: string) =>
-      requestJson<{ opencode: Record<string, unknown>; openwork: Record<string, unknown>; updatedAt?: number | null }>(
+      requestJson<{ opencode: Record<string, unknown>; maya: Record<string, unknown>; updatedAt?: number | null }>(
         baseUrl,
         `/workspace/${workspaceId}/config`,
         { token, hostToken, timeoutMs: timeouts.config },
@@ -1441,7 +1441,7 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
           body: { enabled, clearToken: options?.clearToken ?? false, healthPort: options?.healthPort ?? null },
         },
       ),
-    patchConfig: (workspaceId: string, payload: { opencode?: Record<string, unknown>; openwork?: Record<string, unknown> }) =>
+    patchConfig: (workspaceId: string, payload: { opencode?: Record<string, unknown>; maya?: Record<string, unknown> }) =>
       requestJson<{ updatedAt?: number | null }>(baseUrl, `/workspace/${workspaceId}/config`, {
         token,
         hostToken,

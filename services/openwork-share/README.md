@@ -1,6 +1,6 @@
-# OpenWork Share Service (Publisher)
+# MAYA Share Service (Publisher)
 
-This is a tiny publisher service for OpenWork "share link" bundles.
+This is a tiny publisher service for MAYA "share link" bundles.
 
 It is designed to be deployed on Vercel and backed by Vercel Blob.
 
@@ -9,11 +9,11 @@ It is designed to be deployed on Vercel and backed by Vercel Blob.
 - `POST /v1/bundles`
   - Accepts JSON bundle payloads.
   - Stores bytes in Vercel Blob.
-  - Returns `{ "url": "https://share.openwork.software/b/<id>" }`.
+  - Returns `{ "url": "https://share.maya.software/b/<id>" }`.
 
 - `GET /b/:id`
   - Returns an HTML share page by default for browser requests.
-  - Includes an **Open in app** action that opens `openwork://import-bundle` with:
+  - Includes an **Open in app** action that opens `maya://import-bundle` with:
     - `ow_bundle=<share-url>`
     - `ow_intent=new_worker` (default import target)
     - `ow_source=share_service`
@@ -40,7 +40,7 @@ It is designed to be deployed on Vercel and backed by Vercel Blob.
 ## Optional Environment Variables
 
 - `PUBLIC_BASE_URL`
-  - Default: `https://share.openwork.software`
+  - Default: `https://share.maya.software`
   - Used to construct the returned share URL.
 
 - `MAX_BYTES`
@@ -48,7 +48,7 @@ It is designed to be deployed on Vercel and backed by Vercel Blob.
   - Hard upload limit.
 
 - `PUBLIC_OPENWORK_APP_URL`
-  - Default: `https://app.openwork.software`
+  - Default: `https://app.maya.software`
   - Target app URL for the Open in app action on bundle pages.
 
 ## Local development
@@ -57,7 +57,7 @@ This repo is intended for Vercel deployment.
 For local testing you can use:
 
 ```bash
-cd services/openwork-share
+cd services/maya-share
 pnpm install
 vercel dev
 ```
@@ -68,7 +68,7 @@ vercel dev
 # Human-friendly page
 curl -i "http://localhost:3000/b/<id>" -H "Accept: text/html"
 
-# Machine-readable payload (OpenWork parser path)
+# Machine-readable payload (MAYA parser path)
 curl -i "http://localhost:3000/b/<id>?format=json"
 ```
 

@@ -9,7 +9,7 @@ Runtime requirement: Bun 1.3+ (`bun --version`).
 One-command install (recommended):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/different-ai/openwork/dev/packages/opencode-router/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/different-ai/maya/dev/packages/opencode-router/install.sh | bash
 ```
 
 Install from npm:
@@ -105,7 +105,7 @@ opencode-router bindings list
 
 The router can expose a small local HTTP server for health/config and simple message dispatch.
 
-- `OPENCODE_ROUTER_HEALTH_PORT` controls the port (OpenWork defaults to a random free port when using `openwork`).
+- `OPENCODE_ROUTER_HEALTH_PORT` controls the port (MAYA defaults to a random free port when using `maya`).
 - `PORT` is also accepted as a convenience if the above are unset.
 - `OPENCODE_ROUTER_HEALTH_HOST` controls bind host (default: `127.0.0.1`).
 
@@ -166,8 +166,8 @@ opencode-router send --channel slack --identity default --to D123 --file ./repor
 
 ## Defaults
 
-- SQLite at `~/.openwork/opencode-router/opencode-router.db` unless overridden.
-- Config stored at `~/.openwork/opencode-router/opencode-router.json` (created by `opencode-router` or `pnpm -C packages/opencode-router setup`).
+- SQLite at `~/.maya/opencode-router/opencode-router.db` unless overridden.
+- Config stored at `~/.maya/opencode-router/opencode-router.json` (created by `opencode-router` or `pnpm -C packages/opencode-router setup`).
 - Group chats are disabled unless `GROUPS_ENABLED=true`.
 
 ## Tests

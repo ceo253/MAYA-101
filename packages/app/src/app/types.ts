@@ -131,11 +131,12 @@ export type View = "onboarding" | "dashboard" | "session" | "proto";
 
 export type StartupPreference = "local" | "server";
 
-export type EngineRuntime = "direct" | "openwork-orchestrator";
+export type EngineRuntime = "direct" | "maya-orchestrator";
 
 export type OnboardingStep = "welcome" | "local" | "server" | "connecting";
 
 export type DashboardTab =
+  | "missioncontrol"
   | "scheduled"
   | "soul"
   | "skills"
@@ -143,7 +144,8 @@ export type DashboardTab =
   | "mcp"
   | "identities"
   | "config"
-  | "settings";
+  | "settings"
+  | "documents";
 
 export type SettingsTab = "general" | "model" | "advanced" | "debug";
 

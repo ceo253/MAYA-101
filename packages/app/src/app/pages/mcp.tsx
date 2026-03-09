@@ -338,17 +338,15 @@ export default function McpView(props: McpViewProps) {
                   type="button"
                   disabled={connected() || !canConnect() || connecting()}
                   onClick={() => { if (!connected()) props.connectMcp(entry); }}
-                  class={`group text-left rounded-xl border p-4 transition-all ${
-                    connected()
+                  class={`group text-left rounded-xl border p-4 transition-all ${connected()
                       ? "border-green-6 bg-green-2"
                       : "border-dls-border bg-dls-surface hover:bg-dls-hover hover:shadow-[0_4px_16px_rgba(17,24,39,0.06)]"
-                  }`}
+                    }`}
                 >
                   <div class="flex items-start gap-3">
                     {/* Icon */}
-                    <div class={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
-                      connected() ? "bg-green-3 border-green-6" : serviceIconBg(entry.name)
-                    }`}>
+                    <div class={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${connected() ? "bg-green-3 border-green-6" : serviceIconBg(entry.name)
+                      }`}>
                       <Show
                         when={!connecting()}
                         fallback={<Loader2 size={18} class="animate-spin text-dls-secondary" />}
@@ -432,11 +430,10 @@ export default function McpView(props: McpViewProps) {
                 };
 
                 return (
-                  <div class={`rounded-xl border transition-all ${
-                    isSelected()
+                  <div class={`rounded-xl border transition-all ${isSelected()
                       ? "border-blue-7 bg-blue-2 shadow-sm"
                       : "border-dls-border bg-dls-surface hover:bg-dls-hover"
-                  }`}>
+                    }`}>
                     {/* Clickable row */}
                     <button
                       type="button"
@@ -444,9 +441,8 @@ export default function McpView(props: McpViewProps) {
                       onClick={() => props.setSelectedMcp(isSelected() ? null : entry.name)}
                     >
                       <div class="flex items-center gap-3">
-                        <div class={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                          status() === "connected" ? "bg-green-3 border-green-6" : serviceIconBg(entry.name)
-                        }`}>
+                        <div class={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${status() === "connected" ? "bg-green-3 border-green-6" : serviceIconBg(entry.name)
+                          }`}>
                           <Icon size={15} class={status() === "connected" ? "text-green-11" : serviceColor(entry.name)} />
                         </div>
                         <div class="min-w-0 flex-1">
@@ -612,21 +608,19 @@ export default function McpView(props: McpViewProps) {
             {/* Scope toggle */}
             <div class="flex items-center gap-1.5">
               <button
-                class={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  configScope() === "project"
+                class={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${configScope() === "project"
                     ? "bg-dls-active text-dls-text"
                     : "text-dls-secondary hover:text-dls-text hover:bg-dls-hover"
-                }`}
+                  }`}
                 onClick={() => setConfigScope("project")}
               >
                 {tr("mcp.scope_project")}
               </button>
               <button
-                class={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  configScope() === "global"
+                class={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${configScope() === "global"
                     ? "bg-dls-active text-dls-text"
                     : "text-dls-secondary hover:text-dls-text hover:bg-dls-hover"
-                }`}
+                  }`}
                 onClick={() => setConfigScope("global")}
               >
                 {tr("mcp.scope_global")}
@@ -654,7 +648,7 @@ export default function McpView(props: McpViewProps) {
                   </Show>
                 </Button>
                 <a
-                  href="https://opencode.ai/docs/mcp-servers/"
+                  href="https://maya.ai/docs/mcp-servers/"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center gap-1 text-xs text-dls-secondary hover:text-dls-text transition-colors"

@@ -8,8 +8,8 @@ import Button from "./button";
 export default function CreateWorkspaceModal(props: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (preset: "starter" | "automation" | "minimal", folder: string | null) => void;
-  onConfirmWorker?: (preset: "starter" | "automation" | "minimal", folder: string | null) => void;
+  onConfirm: (preset: "starter" | "automation" | "minimal", folder: string | null, owlEnabled?: boolean) => void;
+  onConfirmWorker?: (preset: "starter" | "automation" | "minimal", folder: string | null, owlEnabled?: boolean) => void;
   onPickFolder: () => Promise<string | null>;
   submitting?: boolean;
   inline?: boolean;
@@ -40,6 +40,8 @@ export default function CreateWorkspaceModal(props: {
   let pickFolderRef: HTMLButtonElement | undefined;
   const translate = (key: string) => t(key, currentLocale());
 
+  const [controlLevel, setControlLevel] = createSignal<"isolation" | "full">("isolation");
+  const [owlEnabled] = createSignal(true);
   const [preset, setPreset] = createSignal<"starter" | "automation" | "minimal">("starter");
   const [selectedFolder, setSelectedFolder] = createSignal<string | null>(null);
   const [pickingFolder, setPickingFolder] = createSignal(false);
@@ -49,19 +51,6 @@ export default function CreateWorkspaceModal(props: {
       requestAnimationFrame(() => pickFolderRef?.focus());
     }
   });
-
-  const options = () => [
-    {
-      id: "starter" as const,
-      name: translate("dashboard.starter_workspace"),
-      desc: translate("dashboard.starter_workspace_desc"),
-    },
-    {
-      id: "minimal" as const,
-      name: translate("dashboard.empty_workspace"),
-      desc: translate("dashboard.empty_workspace_desc"),
-    },
-  ];
 
   const folderLabel = () => {
     const folder = selectedFolder();
@@ -143,87 +132,99 @@ export default function CreateWorkspaceModal(props: {
         </Show>
       </div>
 
-          <div class={`p-6 flex-1 overflow-y-auto space-y-8 transition-opacity duration-300 ${provisioning() ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
-            <div class="space-y-4">
-              <div class="flex items-center gap-3 text-sm font-medium text-gray-12">
-                <div class="w-6 h-6 rounded-full bg-gray-4 flex items-center justify-center text-xs">
-                  1
+      <div class={`p-6 flex-1 overflow-y-auto space-y-8 transition-opacity duration-300 ${provisioning() ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
+        <div class="space-y-4">
+          <div class="flex items-center gap-3 text-sm font-medium text-gray-12">
+            <div class="w-6 h-6 rounded-full bg-gray-4 flex items-center justify-center text-xs">
+              1
+            </div>
+            {translate("dashboard.select_folder")}
+          </div>
+          <div class="ml-9">
+            <button
+              type="button"
+              ref={pickFolderRef}
+              onClick={handlePickFolder}
+              disabled={pickingFolder() || submitting()}
+              class={`w-full border border-dashed border-gray-7 bg-gray-2/50 rounded-xl p-4 text-left transition ${pickingFolder() ? "opacity-70 cursor-wait" : "hover:border-gray-7"
+                }`.trim()}
+            >
+              <div class="flex items-center gap-3 text-gray-12">
+                <FolderPlus size={20} class="text-gray-11" />
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-gray-12 truncate">{folderLabel()}</div>
+                  <div class="text-xs text-gray-10 font-mono truncate mt-1">{folderSubLabel()}</div>
                 </div>
-                {translate("dashboard.select_folder")}
-              </div>
-              <div class="ml-9">
-                <button
-                  type="button"
-                  ref={pickFolderRef}
-                  onClick={handlePickFolder}
-                  disabled={pickingFolder() || submitting()}
-                  class={`w-full border border-dashed border-gray-7 bg-gray-2/50 rounded-xl p-4 text-left transition ${
-                    pickingFolder() ? "opacity-70 cursor-wait" : "hover:border-gray-7"
-                  }`.trim()}
+                <Show
+                  when={pickingFolder()}
+                  fallback={<span class="text-xs text-gray-10">{translate("dashboard.change")}</span>}
                 >
-                  <div class="flex items-center gap-3 text-gray-12">
-                    <FolderPlus size={20} class="text-gray-11" />
-                    <div class="flex-1 min-w-0">
-                      <div class="text-sm font-medium text-gray-12 truncate">{folderLabel()}</div>
-                      <div class="text-xs text-gray-10 font-mono truncate mt-1">{folderSubLabel()}</div>
-                    </div>
-                    <Show
-                      when={pickingFolder()}
-                      fallback={<span class="text-xs text-gray-10">{translate("dashboard.change")}</span>}
-                    >
-                      <span class="flex items-center gap-2 text-xs text-gray-10">
-                        <Loader2 size={12} class="animate-spin" />
-                        {translate("dashboard.opening")}
-                      </span>
-                    </Show>
+                  <span class="flex items-center gap-2 text-xs text-gray-10">
+                    <Loader2 size={12} class="animate-spin" />
+                    {translate("dashboard.opening")}
+                  </span>
+                </Show>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center gap-3 text-sm font-medium text-gray-12">
+            <div class="w-6 h-6 rounded-full bg-gray-4 flex items-center justify-center text-xs">
+              2
+            </div>
+            {translate("dashboard.choose_control_level") || "Control Level"}
+          </div>
+          <div class={`ml-9 grid gap-3 ${!selectedFolder() ? "opacity-50" : ""}`.trim()}>
+            <div
+              onClick={() => {
+                if (!selectedFolder() || submitting()) return;
+                setControlLevel("isolation");
+              }}
+              class={`p-4 rounded-xl border cursor-pointer transition-all ${controlLevel() === "isolation"
+                ? "bg-indigo-7/10 border-indigo-7/50"
+                : "bg-gray-2 border-gray-6 hover:border-gray-7"
+                } ${!selectedFolder() || submitting() ? "pointer-events-none" : ""}`.trim()}
+            >
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class={`font-medium text-sm ${controlLevel() === "isolation" ? "text-indigo-11" : "text-gray-12"}`}>
+                    {translate("onboarding.isolation_label")}
                   </div>
-                </button>
+                  <div class="text-xs text-gray-10 mt-1">{translate("onboarding.isolation_hint")}</div>
+                </div>
+                <Show when={controlLevel() === "isolation"}>
+                  <CheckCircle2 size={16} class="text-indigo-6" />
+                </Show>
               </div>
             </div>
 
-            <div class="space-y-4">
-              <div class="flex items-center gap-3 text-sm font-medium text-gray-12">
-                <div class="w-6 h-6 rounded-full bg-gray-4 flex items-center justify-center text-xs">
-                  2
+            <div
+              onClick={() => {
+                if (!selectedFolder() || submitting()) return;
+                setControlLevel("full");
+              }}
+              class={`p-4 rounded-xl border cursor-pointer transition-all ${controlLevel() === "full"
+                ? "bg-indigo-7/10 border-indigo-7/50"
+                : "bg-gray-2 border-gray-6 hover:border-gray-7"
+                } ${!selectedFolder() || submitting() ? "pointer-events-none" : ""}`.trim()}
+            >
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class={`font-medium text-sm ${controlLevel() === "full" ? "text-indigo-11" : "text-gray-12"}`}>
+                    {translate("onboarding.full_control_label")}
+                  </div>
+                  <div class="text-xs text-gray-10 mt-1">{translate("onboarding.full_control_hint")}</div>
                 </div>
-                {translate("dashboard.choose_preset")}
-              </div>
-              <div class={`ml-9 grid gap-3 ${!selectedFolder() ? "opacity-50" : ""}`.trim()}>
-                <For each={options()}>
-                  {(opt) => (
-                    <div
-                      onClick={() => {
-                        if (!selectedFolder()) return;
-                        if (submitting()) return;
-                        setPreset(opt.id);
-                      }}
-                      class={`p-4 rounded-xl border cursor-pointer transition-all ${
-                        preset() === opt.id
-                          ? "bg-indigo-7/10 border-indigo-7/50"
-                          : "bg-gray-2 border-gray-6 hover:border-gray-7"
-                      } ${!selectedFolder() || submitting() ? "pointer-events-none" : ""}`.trim()}
-                    >
-                      <div class="flex justify-between items-start">
-                        <div>
-                          <div
-                            class={`font-medium text-sm ${
-                              preset() === opt.id ? "text-indigo-11" : "text-gray-12"
-                            }`}
-                          >
-                            {opt.name}
-                          </div>
-                          <div class="text-xs text-gray-10 mt-1">{opt.desc}</div>
-                        </div>
-                        <Show when={preset() === opt.id}>
-                          <CheckCircle2 size={16} class="text-indigo-6" />
-                        </Show>
-                      </div>
-                    </div>
-                  )}
-                </For>
+                <Show when={controlLevel() === "full"}>
+                  <CheckCircle2 size={16} class="text-indigo-6" />
+                </Show>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
       <div class="p-6 border-t border-gray-6 bg-gray-1 flex flex-col gap-3">
         <Show when={submitting() && progress()}>
@@ -266,7 +267,7 @@ export default function CreateWorkspaceModal(props: {
                       if (step.status === "error") return <XCircle size={16} class="text-red-10" />;
                       return <div class="w-4 h-4 rounded-full border-2 border-gray-6" />;
                     };
-                    
+
                     const textClass = () => {
                       if (step.status === "done") return "text-gray-11 font-medium";
                       if (step.status === "active") return "text-gray-12 font-semibold";
@@ -350,34 +351,27 @@ export default function CreateWorkspaceModal(props: {
               {translate("common.cancel")}
             </Button>
           </Show>
-          <Show when={props.onConfirmWorker}>
-            <Button
-              variant="outline"
-              onClick={() => props.onConfirmWorker?.(preset(), selectedFolder())}
-              disabled={!selectedFolder() || submitting() || workerSubmitting() || workerDisabled()}
-              title={(() => {
-                if (!selectedFolder()) return translate("dashboard.choose_folder_continue");
-                if (workerDisabled() && workerDisabledReason()) return workerDisabledReason();
-                return undefined;
-              })()}
-            >
-              <Show when={workerSubmitting()} fallback={workerLabel()}>
-                <span class="inline-flex items-center gap-2">
-                  <Loader2 size={16} class="animate-spin" />
-                  {translate("dashboard.sandbox_checking_docker")}
-                </span>
-              </Show>
-            </Button>
-          </Show>
           <Button
-            onClick={() => props.onConfirm(preset(), selectedFolder())}
-            disabled={!selectedFolder() || submitting()}
-            title={!selectedFolder() ? translate("dashboard.choose_folder_continue") : undefined}
+            onClick={() => {
+              if (controlLevel() === "isolation" && props.onConfirmWorker) {
+                props.onConfirmWorker(preset(), selectedFolder(), owlEnabled());
+              } else {
+                props.onConfirm(preset(), selectedFolder(), owlEnabled());
+              }
+            }}
+            disabled={!selectedFolder() || submitting() || workerSubmitting() || (controlLevel() === "isolation" && workerDisabled())}
+            title={(() => {
+              if (!selectedFolder()) return translate("dashboard.choose_folder_continue");
+              if (controlLevel() === "isolation" && workerDisabled() && workerDisabledReason()) return workerDisabledReason();
+              return undefined;
+            })()}
           >
-            <Show when={submitting()} fallback={confirmLabel()}>
+            <Show when={submitting() || workerSubmitting()} fallback={
+              controlLevel() === "isolation" ? workerLabel() : confirmLabel()
+            }>
               <span class="inline-flex items-center gap-2">
                 <Loader2 size={16} class="animate-spin" />
-                Creating...
+                {workerSubmitting() ? translate("dashboard.sandbox_checking_docker") : "Creating..."}
               </span>
             </Show>
           </Button>

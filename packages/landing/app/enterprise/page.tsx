@@ -2,7 +2,7 @@ import { LandingEnterprise } from "../../components/landing-enterprise";
 import { getGithubData } from "../../lib/github";
 
 export const metadata = {
-  title: "OpenWork — Enterprise",
+  title: "MAYA — Enterprise",
   description: "Secure hosting for safe, permissioned AI employees."
 };
 

@@ -1,20 +1,20 @@
-# OpenWork Server
+# MAYA Server
 
-Filesystem-backed API for OpenWork remote clients. This package provides the OpenWork server layer described in `packages/app/pr/openwork-server.md` and is intentionally independent from the desktop app.
+Filesystem-backed API for MAYA remote clients. This package provides the MAYA server layer described in `packages/app/pr/maya-server.md` and is intentionally independent from the desktop app.
 
 ## Quick start
 
 ```bash
-npm install -g openwork-server
-openwork-server --workspace /path/to/workspace --approval auto
+npm install -g maya-server
+maya-server --workspace /path/to/workspace --approval auto
 ```
 
-`openwork-server` ships as a compiled binary, so Bun is not required at runtime.
+`maya-server` ships as a compiled binary, so Bun is not required at runtime.
 
 Or from source:
 
 ```bash
-pnpm --filter openwork-server dev -- \
+pnpm --filter maya-server dev -- \
   --workspace /path/to/workspace \
   --approval auto
 ```
@@ -25,7 +25,7 @@ Add `--verbose` to print resolved config details on startup. Use `--version` to 
 
 ## Config file
 
-Defaults to `~/.config/openwork/server.json` (override with `OPENWORK_SERVER_CONFIG` or `--config`).
+Defaults to `~/.config/maya/server.json` (override with `OPENWORK_SERVER_CONFIG` or `--config`).
 
 ```json
 {
@@ -109,7 +109,7 @@ Token management (host/owner auth):
 
 Inbox/outbox:
 
-- `POST /workspace/:id/inbox` (multipart upload into `.opencode/openwork/inbox/`)
+- `POST /workspace/:id/inbox` (multipart upload into `.opencode/maya/inbox/`)
 - `GET /workspace/:id/artifacts`
 - `GET /workspace/:id/artifacts/:artifactId`
 - `POST /workspace/:id/files/sessions`
@@ -147,7 +147,7 @@ All writes are gated by host approval.
 
 Host APIs accept either:
 
-- `X-OpenWork-Host-Token: <token>` (legacy host token), or
+- `X-MAYA-Host-Token: <token>` (legacy host token), or
 - `Authorization: Bearer <token>` where the token scope is `owner`.
 
 Approvals endpoints:

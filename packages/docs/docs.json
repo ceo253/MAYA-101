@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "OpenWork Docs",
+  "name": "MAYA Docs",
   "favicon": "/logo/light.svg",
   "logo": {
     "light": "/logo/light.svg",
@@ -21,7 +21,7 @@
             "group": "Foundations",
             "pages": [
               "introduction",
-              "openwork",
+              "maya",
               "orbita-layout-style",
               "opencode-router",
               "cli"
@@ -29,7 +29,7 @@
           },
           {
             "group": "Agent Playbooks",
-            "pages": ["quickstart", "create-openwork-instance"]
+            "pages": ["quickstart", "create-maya-instance"]
           },
           {
             "group": "Tutorials",
@@ -51,8 +51,8 @@
   "navbar": {
     "primary": {
       "type": "button",
-      "label": "Download OpenWork",
-      "href": "https://openwork.software/download"
+      "label": "Download MAYA",
+      "href": "https://maya.software/download"
     }
   }
 }

@@ -26,8 +26,8 @@ x-shared: &shared
     - pnpm-store:/root/.local/share/pnpm/store
     - bun-install:/root/.bun
     - ${OPENWORK_WORKSPACE:-./workspace}:/workspace
-    - ${OPENWORK_HOST_OPENCODE_CONFIG_DIR:-./workspace/.openwork-host-opencode-config}:/persist/.config/opencode:ro
-    - ${OPENWORK_HOST_OPENCODE_DATA_DIR:-./workspace/.openwork-host-opencode-data}:/persist/.openwork-host-opencode-data:ro
+    - ${OPENWORK_HOST_OPENCODE_CONFIG_DIR:-./workspace/.maya-host-opencode-config}:/persist/.config/opencode:ro
+    - ${OPENWORK_HOST_OPENCODE_DATA_DIR:-./workspace/.maya-host-opencode-data}:/persist/.maya-host-opencode-data:ro
 
 services:
   orchestrator:
@@ -61,9 +61,9 @@ services:
 
         # --- Build Linux binaries into container-local path ---
         # Avoids overwriting macOS-native binaries on the host mount.
-        export OPENWORK_SERVER_BIN="/tmp/openwork-bins/openwork-server"
-        export OPENCODE_ROUTER_BIN="/tmp/openwork-bins/opencode-router"
-        mkdir -p /tmp/openwork-bins
+        export OPENWORK_SERVER_BIN="/tmp/maya-bins/maya-server"
+        export OPENCODE_ROUTER_BIN="/tmp/maya-bins/opencode-router"
+        mkdir -p /tmp/maya-bins
 
         # --- Compile sidecars for the container architecture ---
         case "$(uname -m)" in
@@ -79,7 +79,7 @@ services:
             ;;
         esac
 
-        echo "[orchestrator] Building openwork-server binary (linux)..."
+        echo "[orchestrator] Building maya-server binary (linux)..."
         cd /app/packages/server && bun build --compile --target "$$BUN_TARGET" src/cli.ts --outfile "$$OPENWORK_SERVER_BIN"
 
         echo "[orchestrator] Building opencode-router binary (linux)..."
@@ -104,9 +104,9 @@ services:
         if [ -d /persist/.config/opencode ]; then
           cp -R /persist/.config/opencode/. /root/.config/opencode 2>/dev/null || true
         fi
-        if [ -d /persist/.openwork-host-opencode-data ]; then
-          cp /persist/.openwork-host-opencode-data/auth.json /root/.local/share/opencode/auth.json 2>/dev/null || true
-          cp /persist/.openwork-host-opencode-data/mcp-auth.json /root/.local/share/opencode/mcp-auth.json 2>/dev/null || true
+        if [ -d /persist/.maya-host-opencode-data ]; then
+          cp /persist/.maya-host-opencode-data/auth.json /root/.local/share/opencode/auth.json 2>/dev/null || true
+          cp /persist/.maya-host-opencode-data/mcp-auth.json /root/.local/share/opencode/mcp-auth.json 2>/dev/null || true
         fi
 
         # Write tokens so the web service can source them
@@ -116,7 +116,7 @@ services:
 
         echo ""
         echo "============================================"
-        echo "  OpenWork orchestrator"
+        echo "  MAYA orchestrator"
         echo "  Server:     http://localhost:${OPENWORK_PORT:-8787}"
         echo "  Health:     http://localhost:${OPENWORK_PORT:-8787}/health"
         echo "  Token:      $$OPENWORK_TOKEN"
@@ -124,13 +124,13 @@ services:
         echo "============================================"
         echo ""
 
-        exec pnpm --filter openwork-orchestrator dev -- start \
+        exec pnpm --filter maya-orchestrator dev -- start \
           --workspace /workspace \
-          --openwork-host 0.0.0.0 \
-          --openwork-port 8787 \
-          --openwork-token "$$OPENWORK_TOKEN" \
-          --openwork-host-token "$$OPENWORK_HOST_TOKEN" \
-          --openwork-server-bin "$$OPENWORK_SERVER_BIN" \
+          --maya-host 0.0.0.0 \
+          --maya-port 8787 \
+          --maya-token "$$OPENWORK_TOKEN" \
+          --maya-host-token "$$OPENWORK_HOST_TOKEN" \
+          --maya-server-bin "$$OPENWORK_SERVER_BIN" \
           --opencode-router-bin "$$OPENCODE_ROUTER_BIN" \
           --approval auto \
           --allow-external \
@@ -181,7 +181,7 @@ services:
 
         echo ""
         echo "============================================"
-        echo "  OpenWork web UI"
+        echo "  MAYA web UI"
         echo "  URL:   http://localhost:${WEB_PORT:-5173}"
         echo "  Token: $${VITE_OPENWORK_TOKEN:-<see orchestrator logs>}"
         echo "============================================"
@@ -193,7 +193,7 @@ services:
         export HOST="0.0.0.0"
         export PORT="5173"
 
-        exec pnpm --filter @different-ai/openwork-ui exec vite \
+        exec pnpm --filter @different-ai/maya-ui exec vite \
           --host 0.0.0.0 \
           --port 5173 \
           --strictPort
@@ -204,6 +204,6 @@ services:
 
 volumes:
   pnpm-store:
-    name: openwork-dev-pnpm-store
+    name: maya-dev-pnpm-store
   bun-install:
-    name: openwork-dev-bun-install
+    name: maya-dev-bun-install

@@ -51,13 +51,13 @@ Verified:
 ## Test commands run
 
 - `pnpm typecheck` (pass)
-- `pnpm --filter @different-ai/openwork-ui test:health` (fails in this environment: `Unauthorized` on `/global/health`)
-- `pnpm --filter @different-ai/openwork-ui test:events` (same `Unauthorized` failure)
-- `pnpm --filter @different-ai/openwork-ui test:sessions` (same `Unauthorized` failure)
-- `pnpm --filter @different-ai/openwork-ui test:todos` (same `Unauthorized` failure)
-- `pnpm --filter @different-ai/openwork-ui test:permissions` (same `Unauthorized` failure)
-- `pnpm --filter @different-ai/openwork-ui test:session-switch` (same `Unauthorized` failure)
-- `pnpm --filter @different-ai/openwork-ui build` (fails in this environment: missing optional `@rollup/rollup-darwin-arm64`)
+- `pnpm --filter @different-ai/maya-ui test:health` (fails in this environment: `Unauthorized` on `/global/health`)
+- `pnpm --filter @different-ai/maya-ui test:events` (same `Unauthorized` failure)
+- `pnpm --filter @different-ai/maya-ui test:sessions` (same `Unauthorized` failure)
+- `pnpm --filter @different-ai/maya-ui test:todos` (same `Unauthorized` failure)
+- `pnpm --filter @different-ai/maya-ui test:permissions` (same `Unauthorized` failure)
+- `pnpm --filter @different-ai/maya-ui test:session-switch` (same `Unauthorized` failure)
+- `pnpm --filter @different-ai/maya-ui build` (fails in this environment: missing optional `@rollup/rollup-darwin-arm64`)
 
 ## Environment notes
 

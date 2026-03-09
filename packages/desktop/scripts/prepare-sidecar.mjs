@@ -155,21 +155,21 @@ const opencodeTargetPath = opencodeTargetName ? join(sidecarDir, opencodeTargetN
 const opencodeCandidatePath = opencodeTargetPath ?? opencodePath;
 let existingOpencodeVersion = null;
 
-// openwork-server paths
-const openworkServerBaseName = "openwork-server";
-const openworkServerName = process.platform === "win32" ? `${openworkServerBaseName}.exe` : openworkServerBaseName;
-const openworkServerPath = join(sidecarDir, openworkServerName);
-const openworkServerBuildName = bunTarget
-  ? `${openworkServerBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
-  : openworkServerName;
-const openworkServerBuildPath = join(sidecarDir, openworkServerBuildName);
-const openworkServerTargetTriple = resolvedTargetTriple;
-const openworkServerTargetName = openworkServerTargetTriple
-  ? `${openworkServerBaseName}-${openworkServerTargetTriple}${openworkServerTargetTriple.includes("windows") ? ".exe" : ""}`
+// maya-server paths
+const mayaServerBaseName = "maya-server";
+const mayaServerName = process.platform === "win32" ? `${mayaServerBaseName}.exe` : mayaServerBaseName;
+const mayaServerPath = join(sidecarDir, mayaServerName);
+const mayaServerBuildName = bunTarget
+  ? `${mayaServerBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
+  : mayaServerName;
+const mayaServerBuildPath = join(sidecarDir, mayaServerBuildName);
+const mayaServerTargetTriple = resolvedTargetTriple;
+const mayaServerTargetName = mayaServerTargetTriple
+  ? `${mayaServerBaseName}-${mayaServerTargetTriple}${mayaServerTargetTriple.includes("windows") ? ".exe" : ""}`
   : null;
-const openworkServerTargetPath = openworkServerTargetName ? join(sidecarDir, openworkServerTargetName) : null;
+const mayaServerTargetPath = mayaServerTargetName ? join(sidecarDir, mayaServerTargetName) : null;
 
-const openworkServerDir = resolve(__dirname, "..", "..", "server");
+const mayaServerDir = resolve(__dirname, "..", "..", "server");
 
 const resolveBuildScript = (dir) => {
   const scriptPath = resolve(dir, "script", "build.ts");
@@ -195,7 +195,7 @@ const opencodeRouterTargetPath = opencodeRouterTargetName ? join(sidecarDir, ope
 const opencodeRouterDir = resolve(__dirname, "..", "..", "opencode-router");
 
 // orchestrator paths
-const orchestratorBaseName = "openwork-orchestrator";
+const orchestratorBaseName = "maya-orchestrator";
 const orchestratorName =
   process.platform === "win32" ? `${orchestratorBaseName}.exe` : orchestratorBaseName;
 const orchestratorPath = join(sidecarDir, orchestratorName);
@@ -320,28 +320,28 @@ const parseChecksum = (content, assetName) => {
 
 let didBuildOpenworkServer = false;
 const shouldBuildOpenworkServer =
-  forceBuild || !existsSync(openworkServerBuildPath) || isStubBinary(openworkServerBuildPath);
+  forceBuild || !existsSync(mayaServerBuildPath) || isStubBinary(mayaServerBuildPath);
 
 if (shouldBuildOpenworkServer) {
   mkdirSync(sidecarDir, { recursive: true });
-  if (existsSync(openworkServerBuildPath)) {
+  if (existsSync(mayaServerBuildPath)) {
     try {
-      unlinkSync(openworkServerBuildPath);
+      unlinkSync(mayaServerBuildPath);
     } catch {
       // ignore
     }
   }
-  const openworkServerScript = resolveBuildScript(openworkServerDir);
-  if (!existsSync(openworkServerScript)) {
-    console.error(`OpenWork server build script not found at ${openworkServerScript}`);
+  const mayaServerScript = resolveBuildScript(mayaServerDir);
+  if (!existsSync(mayaServerScript)) {
+    console.error(`MAYA server build script not found at ${mayaServerScript}`);
     process.exit(1);
   }
-  const openworkServerArgs = [openworkServerScript, "--outdir", sidecarDir, "--filename", "openwork-server"];
+  const mayaServerArgs = [mayaServerScript, "--outdir", sidecarDir, "--filename", "maya-server"];
   if (bunTarget) {
-    openworkServerArgs.push("--target", bunTarget);
+    mayaServerArgs.push("--target", bunTarget);
   }
-  const buildResult = spawnSync("bun", openworkServerArgs, {
-    cwd: openworkServerDir,
+  const buildResult = spawnSync("bun", mayaServerArgs, {
+    cwd: mayaServerDir,
     stdio: "inherit",
     shell: true,
   });
@@ -353,31 +353,31 @@ if (shouldBuildOpenworkServer) {
   didBuildOpenworkServer = true;
 }
 
-if (existsSync(openworkServerBuildPath)) {
-  const shouldCopyCanonical = didBuildOpenworkServer || !existsSync(openworkServerPath) || isStubBinary(openworkServerPath);
-  if (shouldCopyCanonical && openworkServerBuildPath !== openworkServerPath) {
+if (existsSync(mayaServerBuildPath)) {
+  const shouldCopyCanonical = didBuildOpenworkServer || !existsSync(mayaServerPath) || isStubBinary(mayaServerPath);
+  if (shouldCopyCanonical && mayaServerBuildPath !== mayaServerPath) {
     try {
-      if (existsSync(openworkServerPath)) {
-        unlinkSync(openworkServerPath);
+      if (existsSync(mayaServerPath)) {
+        unlinkSync(mayaServerPath);
       }
     } catch {
       // ignore
     }
-    copyFileSync(openworkServerBuildPath, openworkServerPath);
+    copyFileSync(mayaServerBuildPath, mayaServerPath);
   }
 
-  if (openworkServerTargetPath) {
+  if (mayaServerTargetPath) {
     const shouldCopyTarget =
-      didBuildOpenworkServer || !existsSync(openworkServerTargetPath) || isStubBinary(openworkServerTargetPath);
-    if (shouldCopyTarget && openworkServerBuildPath !== openworkServerTargetPath) {
+      didBuildOpenworkServer || !existsSync(mayaServerTargetPath) || isStubBinary(mayaServerTargetPath);
+    if (shouldCopyTarget && mayaServerBuildPath !== mayaServerTargetPath) {
       try {
-        if (existsSync(openworkServerTargetPath)) {
-          unlinkSync(openworkServerTargetPath);
+        if (existsSync(mayaServerTargetPath)) {
+          unlinkSync(mayaServerTargetPath);
         }
       } catch {
         // ignore
       }
-      copyFileSync(openworkServerBuildPath, openworkServerTargetPath);
+      copyFileSync(mayaServerBuildPath, mayaServerTargetPath);
     }
   }
 }
@@ -741,9 +741,9 @@ if (existsSync(chromeDevtoolsBuildPath)) {
   }
 }
 
-const openworkServerVersion = (() => {
+const mayaServerVersion = (() => {
   try {
-    const raw = readFileSync(resolve(openworkServerDir, "package.json"), "utf8");
+    const raw = readFileSync(resolve(mayaServerDir, "package.json"), "utf8");
     return String(JSON.parse(raw).version ?? "").trim();
   } catch {
     return null;
@@ -764,15 +764,15 @@ const versions = {
     version: normalizedOpencodeVersion,
     sha256: opencodeCandidatePath && existsSync(opencodeCandidatePath) ? sha256File(opencodeCandidatePath) : null,
   },
-  "openwork-server": {
-    version: openworkServerVersion,
-    sha256: existsSync(openworkServerPath) ? sha256File(openworkServerPath) : null,
+  "maya-server": {
+    version: mayaServerVersion,
+    sha256: existsSync(mayaServerPath) ? sha256File(mayaServerPath) : null,
   },
   opencodeRouter: {
     version: expectedOpenCodeRouterVersion,
     sha256: existsSync(opencodeRouterPath) ? sha256File(opencodeRouterPath) : null,
   },
-  "openwork-orchestrator": {
+  "maya-orchestrator": {
     version: orchestratorVersion,
     sha256: existsSync(orchestratorPath) ? sha256File(orchestratorPath) : null,
   },

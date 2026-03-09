@@ -93,7 +93,7 @@ const SANDBOX_INTERNAL_OPENWORK_PORT = DEFAULT_OPENWORK_PORT;
 const SANDBOX_INTERNAL_OPENCODE_ROUTER_HEALTH_PORT = 3005;
 
 const SANDBOX_OPENCODE_GLOBAL_CONFIG_CONTAINER_PATH = "/persist/.config/opencode";
-const SANDBOX_OPENCODE_GLOBAL_DATA_IMPORT_CONTAINER_PATH = "/persist/.openwork-host-opencode-data";
+const SANDBOX_OPENCODE_GLOBAL_DATA_IMPORT_CONTAINER_PATH = "/persist/.maya-host-opencode-data";
 
 type ParsedArgs = {
   positionals: string[];
@@ -110,7 +110,7 @@ type VersionInfo = {
   sha256: string;
 };
 
-type SidecarName = "openwork-server" | "opencode-router" | "opencode";
+type SidecarName = "maya-server" | "opencode-router" | "opencode";
 
 type SidecarTarget =
   | "darwin-arm64"
@@ -488,7 +488,7 @@ let cachedSandboxAllowlistError: string | null = null;
 function resolveSandboxAllowlistPath(): string {
   const override = process.env.OPENWORK_SANDBOX_MOUNT_ALLOWLIST?.trim();
   if (override) return resolve(override);
-  return join(homedir(), ".config", "openwork", "sandbox-mount-allowlist.json");
+  return join(homedir(), ".config", "maya", "sandbox-mount-allowlist.json");
 }
 
 function expandTildePath(input: string): string {
@@ -968,7 +968,7 @@ function prefixStream(
 
 function shouldUseBun(bin: string): boolean {
   if (!bin.endsWith(`${join("dist", "cli.js")}`)) return false;
-  if (bin.includes("openwork-server")) return true;
+  if (bin.includes("maya-server")) return true;
   return bin.includes(`${join("packages", "server")}`);
 }
 
@@ -1109,13 +1109,13 @@ function resolveSidecarDir(flags: Map<string, string | boolean>): string {
 function resolveSidecarBaseUrl(flags: Map<string, string | boolean>, cliVersion: string): string {
   const override = readFlag(flags, "sidecar-base-url") ?? process.env.OPENWORK_SIDECAR_BASE_URL;
   if (override && override.trim()) return override.trim();
-  return `https://github.com/different-ai/openwork/releases/download/openwork-orchestrator-v${cliVersion}`;
+  return `https://github.com/different-ai/maya/releases/download/maya-orchestrator-v${cliVersion}`;
 }
 
 function resolveSidecarManifestUrl(flags: Map<string, string | boolean>, baseUrl: string): string {
   const override = readFlag(flags, "sidecar-manifest") ?? process.env.OPENWORK_SIDECAR_MANIFEST_URL;
   if (override && override.trim()) return override.trim();
-  return `${baseUrl.replace(/\/$/, "")}/openwork-orchestrator-sidecars.json`;
+  return `${baseUrl.replace(/\/$/, "")}/maya-orchestrator-sidecars.json`;
 }
 
 function resolveSidecarConfig(flags: Map<string, string | boolean>, cliVersion: string): SidecarConfig {
@@ -1309,8 +1309,8 @@ async function resolveOpencodeDownload(sidecar: SidecarConfig, expectedVersion?:
 
   await mkdir(targetDir, { recursive: true });
   const stamp = Date.now();
-  const archivePath = join(tmpdir(), `openwork-orchestrator-opencode-${stamp}-${asset}`);
-  const extractDir = await mkdtemp(join(tmpdir(), "openwork-orchestrator-opencode-"));
+  const archivePath = join(tmpdir(), `maya-orchestrator-opencode-${stamp}-${asset}`);
+  const extractDir = await mkdtemp(join(tmpdir(), "maya-orchestrator-opencode-"));
 
   try {
     await downloadToPath(url, archivePath);
@@ -1427,7 +1427,7 @@ async function resolveExpectedVersion(
 
   try {
     const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-    if (name === "openwork-server") {
+    if (name === "maya-server") {
       const localPath = join(root, "..", "server", "package.json");
       const localVersion = await readPackageVersion(localPath);
       if (localVersion) return localVersion;
@@ -1455,9 +1455,9 @@ async function resolveExpectedVersion(
   }
 
   const require = createRequire(import.meta.url);
-  if (name === "openwork-server") {
+  if (name === "maya-server") {
     try {
-      const pkgPath = require.resolve("openwork-server/package.json");
+      const pkgPath = require.resolve("maya-server/package.json");
       const version = await readPackageVersion(pkgPath);
       if (version) return version;
     } catch {
@@ -1634,30 +1634,30 @@ async function resolveOpenworkServerBin(options: {
   source: BinarySourcePreference;
 }): Promise<ResolvedBinary> {
   if (options.explicit && !options.allowExternal) {
-    throw new Error("openwork-server-bin requires --allow-external");
+    throw new Error("maya-server-bin requires --allow-external");
   }
   if (options.explicit && options.source !== "auto" && options.source !== "external") {
-    throw new Error("openwork-server-bin requires --sidecar-source external or auto");
+    throw new Error("maya-server-bin requires --sidecar-source external or auto");
   }
 
-  const expectedVersion = await resolveExpectedVersion(options.manifest, "openwork-server");
+  const expectedVersion = await resolveExpectedVersion(options.manifest, "maya-server");
   const resolveExternal = async (): Promise<ResolvedBinary> => {
     if (!options.allowExternal) {
-      throw new Error("External openwork-server requires --allow-external");
+      throw new Error("External maya-server requires --allow-external");
     }
     if (options.explicit) {
       const resolved = resolveBinPath(options.explicit);
       if ((resolved.includes("/") || resolved.startsWith(".")) && !(await fileExists(resolved))) {
-        throw new Error(`openwork-server-bin not found: ${resolved}`);
+        throw new Error(`maya-server-bin not found: ${resolved}`);
       }
       return { bin: resolved, source: "external", expectedVersion };
     }
 
     const require = createRequire(import.meta.url);
     try {
-      const pkgPath = require.resolve("openwork-server/package.json");
+      const pkgPath = require.resolve("maya-server/package.json");
       const pkgDir = dirname(pkgPath);
-      const binaryPath = join(pkgDir, "dist", "bin", "openwork-server");
+      const binaryPath = join(pkgDir, "dist", "bin", "maya-server");
       if (await isExecutable(binaryPath)) {
         return { bin: binaryPath, source: "external", expectedVersion };
       }
@@ -1669,23 +1669,23 @@ async function resolveOpenworkServerBin(options: {
       // ignore
     }
 
-    return { bin: "openwork-server", source: "external", expectedVersion };
+    return { bin: "maya-server", source: "external", expectedVersion };
   };
 
   if (options.source === "bundled") {
-    const bundled = await resolveBundledBinary(options.manifest, "openwork-server");
+    const bundled = await resolveBundledBinary(options.manifest, "maya-server");
     if (!bundled) {
       throw new Error(
-        "Bundled openwork-server binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled maya-server binary missing. Build with pnpm --filter maya-orchestrator build:bin:bundled.",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
   }
 
   if (options.source === "downloaded") {
-    const downloaded = await downloadSidecarBinary({ name: "openwork-server", sidecar: options.sidecar });
+    const downloaded = await downloadSidecarBinary({ name: "maya-server", sidecar: options.sidecar });
     if (!downloaded) {
-      throw new Error("openwork-server download failed. Check sidecar manifest or base URL.");
+      throw new Error("maya-server download failed. Check sidecar manifest or base URL.");
     }
     return downloaded;
   }
@@ -1694,7 +1694,7 @@ async function resolveOpenworkServerBin(options: {
     return resolveExternal();
   }
 
-  const bundled = await resolveBundledBinary(options.manifest, "openwork-server");
+  const bundled = await resolveBundledBinary(options.manifest, "maya-server");
   if (bundled && !(options.allowExternal && options.explicit)) {
     return { bin: bundled, source: "bundled", expectedVersion };
   }
@@ -1703,12 +1703,12 @@ async function resolveOpenworkServerBin(options: {
     return resolveExternal();
   }
 
-  const downloaded = await downloadSidecarBinary({ name: "openwork-server", sidecar: options.sidecar });
+  const downloaded = await downloadSidecarBinary({ name: "maya-server", sidecar: options.sidecar });
   if (downloaded) return downloaded;
 
   if (!options.allowExternal) {
     throw new Error(
-      "Bundled openwork-server binary missing and download failed. Use --allow-external or --sidecar-source external.",
+      "Bundled maya-server binary missing and download failed. Use --allow-external or --sidecar-source external.",
     );
   }
 
@@ -1748,7 +1748,7 @@ async function resolveOpencodeBin(options: {
     const bundled = await resolveBundledBinary(options.manifest, "opencode");
     if (!bundled) {
       throw new Error(
-        "Bundled opencode binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled opencode binary missing. Build with pnpm --filter maya-orchestrator build:bin:bundled.",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
@@ -1860,7 +1860,7 @@ async function resolveOpenCodeRouterBin(options: {
     const bundled = await resolveBundledBinary(options.manifest, "opencode-router");
     if (!bundled) {
       throw new Error(
-        "Bundled opencodeRouter binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled opencodeRouter binary missing. Build with pnpm --filter maya-orchestrator build:bin:bundled.",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
@@ -1904,11 +1904,11 @@ function resolveRouterDataDir(flags: Map<string, string | boolean>): string {
   if (override && override.trim()) {
     return resolve(override.trim());
   }
-  return join(homedir(), ".openwork", "openwork-orchestrator");
+  return join(homedir(), ".maya", "maya-orchestrator");
 }
 
 function routerStatePath(dataDir: string): string {
-  return join(dataDir, "openwork-orchestrator-state.json");
+  return join(dataDir, "maya-orchestrator-state.json");
 }
 
 function nowMs(): number {
@@ -2293,8 +2293,8 @@ async function fetchOpenCodeRouterHealth(baseUrl: string): Promise<OpenCodeRoute
   return (await fetchJson(`${baseUrl.replace(/\/$/, "")}/health`)) as OpenCodeRouterHealthSnapshot;
 }
 
-async function fetchOpenCodeRouterHealthViaOpenwork(openworkUrl: string, token: string): Promise<OpenCodeRouterHealthSnapshot> {
-  const url = `${openworkUrl.replace(/\/$/, "")}/opencode-router/health`;
+async function fetchOpenCodeRouterHealthViaOpenwork(mayaUrl: string, token: string): Promise<OpenCodeRouterHealthSnapshot> {
+  const url = `${mayaUrl.replace(/\/$/, "")}/opencode-router/health`;
   return (await fetchJson(url, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -2321,12 +2321,12 @@ async function waitForOpenCodeRouterHealthy(baseUrl: string, timeoutMs = 10_000,
 }
 
 async function waitForOpenCodeRouterHealthyViaOpenwork(
-  openworkUrl: string,
+  mayaUrl: string,
   token: string,
   timeoutMs = 10_000,
   pollMs = 500,
 ): Promise<OpenCodeRouterHealthSnapshot> {
-  const url = `${openworkUrl.replace(/\/$/, "")}/opencode-router/health`;
+  const url = `${mayaUrl.replace(/\/$/, "")}/opencode-router/health`;
   const start = Date.now();
   let lastError: string | null = null;
   while (Date.now() - start < timeoutMs) {
@@ -2345,7 +2345,7 @@ async function waitForOpenCodeRouterHealthyViaOpenwork(
     }
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
-  throw new Error(lastError ?? "Timed out waiting for opencodeRouter health via openwork-server");
+  throw new Error(lastError ?? "Timed out waiting for opencodeRouter health via maya-server");
 }
 
 async function waitForOpencodeHealthy(client: ReturnType<typeof createOpencodeClient>, timeoutMs = 10_000, pollMs = 250) {
@@ -2365,7 +2365,7 @@ async function waitForOpencodeHealthy(client: ReturnType<typeof createOpencodeCl
 }
 
 /**
- * In sandbox mode the released openwork-server binary may not have our latest
+ * In sandbox mode the released maya-server binary may not have our latest
  * token/proxy changes.  Instead of relying on the OpenCode SDK client (which
  * sends Bearer auth that the proxy may not understand yet), we do a simple
  * HTTP fetch through the proxy path.  The server's /opencode/* proxy already
@@ -2376,7 +2376,7 @@ async function waitForOpencodeHealthy(client: ReturnType<typeof createOpencodeCl
  * We try multiple path patterns because:
  * - `/opencode/health` — most common OpenCode health endpoint proxied by the
  *   server's catch-all /opencode/* route.
- * - `/health` on the openwork-server itself — already verified by the caller,
+ * - `/health` on the maya-server itself — already verified by the caller,
  *   but serves as a fallback signal.
  */
 async function waitForHealthyViaProxy(
@@ -2410,21 +2410,21 @@ async function waitForHealthyViaProxy(
 
 function printHelp(): void {
   const message = [
-    "openwork",
+    "maya",
     "",
     "Usage:",
-    "  openwork start [--workspace <path>] [options]",
-    "  openwork serve [--workspace <path>] [options]",
-    "  openwork daemon [run|start|stop|status] [options]",
-    "  openwork workspace <action> [options]",
-    "  openwork instance dispose <id> [options]",
-    "  openwork approvals list --openwork-url <url> --host-token <token>",
-    "  openwork approvals reply <id> --allow|--deny --openwork-url <url> --host-token <token>",
-    "  openwork files <action> [options]",
-    "  openwork status [--openwork-url <url>] [--opencode-url <url>]",
+    "  maya start [--workspace <path>] [options]",
+    "  maya serve [--workspace <path>] [options]",
+    "  maya daemon [run|start|stop|status] [options]",
+    "  maya workspace <action> [options]",
+    "  maya instance dispose <id> [options]",
+    "  maya approvals list --maya-url <url> --host-token <token>",
+    "  maya approvals reply <id> --allow|--deny --maya-url <url> --host-token <token>",
+    "  maya files <action> [options]",
+    "  maya status [--maya-url <url>] [--opencode-url <url>]",
     "",
     "Commands:",
-    "  start                   Start OpenCode + OpenWork server + OpenCodeRouter",
+    "  start                   Start OpenCode + MAYA server + OpenCodeRouter",
     "  serve                   Start services and stream logs (no TUI)",
     "  daemon                  Run orchestrator router daemon (multi-workspace)",
     "  workspace               Manage workspaces (add/list/switch/path)",
@@ -2432,7 +2432,7 @@ function printHelp(): void {
     "  approvals list           List pending approval requests",
     "  approvals reply <id>     Approve or deny a request",
     "  files                   Manage file sessions and batch file sync",
-    "  status                  Check OpenCode/OpenWork health",
+    "  status                  Check OpenCode/MAYA health",
     "",
     "Options:",
     "  --workspace <path>        Workspace directory (default: cwd)",
@@ -2450,10 +2450,10 @@ function printHelp(): void {
     "  --opencode-hot-reload-cooldown-ms <ms>  Minimum interval between hot reloads (default: 1500)",
     "  --opencode-username <u>   OpenCode basic auth username",
     "  --opencode-password <p>   OpenCode basic auth password",
-    "  --openwork-host <host>    Bind host for openwork-server (default: 0.0.0.0)",
-    "  --openwork-port <port>    Port for openwork-server (default: 8787)",
-    "  --openwork-token <token>  Client token for openwork-server",
-    "  --openwork-host-token <t> Host token for approvals",
+    "  --maya-host <host>    Bind host for maya-server (default: 0.0.0.0)",
+    "  --maya-port <port>    Port for maya-server (default: 8787)",
+    "  --maya-token <token>  Client token for maya-server",
+    "  --maya-host-token <t> Host token for approvals",
     "  --workspace-id <id>       Workspace id for file session commands",
     "  --session-id <id>         File session id for file session commands",
     "  --path <path>             Workspace-relative file path",
@@ -2470,10 +2470,10 @@ function printHelp(): void {
     "  --recursive               Recursive delete for files delete",
     "  --approval <mode>         manual | auto (default: manual)",
     "  --approval-timeout <ms>   Approval timeout in ms",
-    "  --read-only               Start OpenWork server in read-only mode",
+    "  --read-only               Start MAYA server in read-only mode",
     "  --cors <origins>          Comma-separated CORS origins or *",
     "  --connect-host <host>     Override LAN host used for pairing URLs",
-    "  --openwork-server-bin <p> Path to openwork-server binary (requires --allow-external)",
+    "  --maya-server-bin <p> Path to maya-server binary (requires --allow-external)",
     "  --opencode-router-bin <path>     Path to opencodeRouter binary (requires --allow-external)",
     "  --opencode-router-health-port <p> Health server port for opencodeRouter (default: random)",
     "  --no-opencode-router             Disable opencodeRouter sidecar",
@@ -2553,7 +2553,7 @@ async function startOpencode(options: {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
-      OPENCODE_CLIENT: "openwork-orchestrator",
+      OPENCODE_CLIENT: "maya-orchestrator",
       OPENWORK: "1",
       OPENWORK_RUN_ID: options.runId,
       OPENWORK_LOG_FORMAT: options.logFormat,
@@ -2654,7 +2654,7 @@ async function startOpenworkServer(options: {
       OPENWORK_LOG_FORMAT: options.logFormat,
       OTEL_RESOURCE_ATTRIBUTES: mergeResourceAttributes(
         {
-          "service.name": "openwork-server",
+          "service.name": "maya-server",
           "service.instance.id": options.runId,
         },
         process.env.OTEL_RESOURCE_ATTRIBUTES,
@@ -2668,8 +2668,8 @@ async function startOpenworkServer(options: {
     },
   });
 
-  prefixStream(child.stdout, "openwork-server", "stdout", options.logger, child.pid ?? undefined);
-  prefixStream(child.stderr, "openwork-server", "stderr", options.logger, child.pid ?? undefined);
+  prefixStream(child.stdout, "maya-server", "stdout", options.logger, child.pid ?? undefined);
+  prefixStream(child.stderr, "maya-server", "stderr", options.logger, child.pid ?? undefined);
 
   return child;
 }
@@ -2826,7 +2826,7 @@ async function ensureAppleContainerSystemReady(): Promise<void> {
 async function stageSandboxRuntime(options: {
   persistDir: string;
   containerName: string;
-  sidecars: { opencode: string; openworkServer: string; opencodeRouter?: string | null };
+  sidecars: { opencode: string; mayaServer: string; opencodeRouter?: string | null };
   detach: boolean;
 }): Promise<{
   baseDir: string;
@@ -2834,7 +2834,7 @@ async function stageSandboxRuntime(options: {
   entrypointHostPath: string;
   cleanup: () => Promise<void>;
 }> {
-  const baseDir = join(options.persistDir, "openwork-orchestrator-sandbox", options.containerName);
+  const baseDir = join(options.persistDir, "maya-orchestrator-sandbox", options.containerName);
   await mkdir(baseDir, { recursive: true });
 
   const sidecarsDir = join(baseDir, "sidecars");
@@ -2842,9 +2842,9 @@ async function stageSandboxRuntime(options: {
   const entrypointHostPath = join(baseDir, "entrypoint.sh");
 
   const stagedOpencode = join(sidecarsDir, "opencode");
-  const stagedOpenwork = join(sidecarsDir, "openwork-server");
+  const stagedOpenwork = join(sidecarsDir, "maya-server");
   await copyFile(options.sidecars.opencode, stagedOpencode);
-  await copyFile(options.sidecars.openworkServer, stagedOpenwork);
+  await copyFile(options.sidecars.mayaServer, stagedOpenwork);
   await ensureExecutable(stagedOpencode);
   await ensureExecutable(stagedOpenwork);
 
@@ -2854,7 +2854,7 @@ async function stageSandboxRuntime(options: {
     await ensureExecutable(stagedOpenCodeRouter);
   }
 
-  const rootInContainer = `/persist/openwork-orchestrator-sandbox/${options.containerName}`;
+  const rootInContainer = `/persist/maya-orchestrator-sandbox/${options.containerName}`;
   const cleanup = async () => {
     if (options.detach) return;
     try {
@@ -2878,7 +2878,7 @@ async function writeSandboxEntrypoint(options: {
     password?: string;
     hotReload: OpencodeHotReload;
   };
-  openwork: {
+  maya: {
     token: string;
     hostToken: string;
     approvalMode: ApprovalMode;
@@ -2894,7 +2894,7 @@ async function writeSandboxEntrypoint(options: {
   logFormat: LogFormat;
 }): Promise<void> {
   const opencodeBin = `${options.rootInContainer}/sidecars/opencode`;
-  const openworkBin = `${options.rootInContainer}/sidecars/openwork-server`;
+  const mayaBin = `${options.rootInContainer}/sidecars/maya-server`;
   const opencodeRouterBin = `${options.rootInContainer}/sidecars/opencode-router`;
   const workspaceDir = "/workspace";
   const opencodeConfigDir = options.opencodeConfigDirInContainer;
@@ -2905,8 +2905,8 @@ async function writeSandboxEntrypoint(options: {
     .map((origin) => `--cors ${shQuote(origin)}`)
     .join(" ");
 
-  const openworkCors = options.openwork.corsOrigins.length
-    ? `--cors ${shQuote(options.openwork.corsOrigins.join(","))}`
+  const mayaCors = options.maya.corsOrigins.length
+    ? `--cors ${shQuote(options.maya.corsOrigins.join(","))}`
     : "";
 
   const opencodeAuthEnv = [
@@ -2916,14 +2916,14 @@ async function writeSandboxEntrypoint(options: {
     .filter(Boolean)
     .join("\n");
 
-  const openworkAuthArgs = [
-    options.openwork.opencodeUsername ? `--opencode-username ${shQuote(options.openwork.opencodeUsername)}` : "",
-    options.openwork.opencodePassword ? `--opencode-password ${shQuote(options.openwork.opencodePassword)}` : "",
+  const mayaAuthArgs = [
+    options.maya.opencodeUsername ? `--opencode-username ${shQuote(options.maya.opencodeUsername)}` : "",
+    options.maya.opencodePassword ? `--opencode-password ${shQuote(options.maya.opencodePassword)}` : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const opencodeRouterEnv = options.openwork.opencodeRouterEnabled
+  const opencodeRouterEnv = options.maya.opencodeRouterEnabled
     ? `export OPENCODE_ROUTER_HEALTH_PORT=${shQuote(String(SANDBOX_INTERNAL_OPENCODE_ROUTER_HEALTH_PORT))}`
     : "";
 
@@ -2945,7 +2945,7 @@ async function writeSandboxEntrypoint(options: {
     "mkdir -p \"$XDG_DATA_HOME/opencode\"",
     `if [ -d ${shQuote(hostOpencodeDataDir)} ]; then cp ${shQuote(`${hostOpencodeDataDir}/auth.json`)} \"$XDG_DATA_HOME/opencode/auth.json\" 2>/dev/null || true; cp ${shQuote(`${hostOpencodeDataDir}/mcp-auth.json`)} \"$XDG_DATA_HOME/opencode/mcp-auth.json\" 2>/dev/null || true; fi`,
     `export OPENCODE_URL=${shQuote(`http://127.0.0.1:${SANDBOX_INTERNAL_OPENCODE_PORT}`)}`,
-    `export OPENCODE_CLIENT=openwork-orchestrator`,
+    `export OPENCODE_CLIENT=maya-orchestrator`,
     `export OPENCODE_HOT_RELOAD=${shQuote(options.opencode.hotReload.enabled ? "1" : "0")}`,
     `export OPENCODE_HOT_RELOAD_DEBOUNCE_MS=${shQuote(String(options.opencode.hotReload.debounceMs))}`,
     `export OPENCODE_HOT_RELOAD_COOLDOWN_MS=${shQuote(String(options.opencode.hotReload.cooldownMs))}`,
@@ -2965,20 +2965,20 @@ async function writeSandboxEntrypoint(options: {
     "trap cleanup INT TERM",
     `${shQuote(opencodeBin)} serve --hostname 127.0.0.1 --port ${shQuote(String(SANDBOX_INTERNAL_OPENCODE_PORT))} ${opencodeCors} &`,
     "opencode_pid=$!",
-    options.openwork.opencodeRouterEnabled ? `${shQuote(opencodeRouterBin)} serve ${shQuote(workspaceDir)} &` : "",
-    options.openwork.opencodeRouterEnabled ? "opencodeRouter_pid=$!" : "",
-    `exec ${shQuote(openworkBin)} --host 0.0.0.0 --port ${shQuote(String(SANDBOX_INTERNAL_OPENWORK_PORT))}` +
-      ` --token ${shQuote(options.openwork.token)} --host-token ${shQuote(options.openwork.hostToken)}` +
+    options.maya.opencodeRouterEnabled ? `${shQuote(opencodeRouterBin)} serve ${shQuote(workspaceDir)} &` : "",
+    options.maya.opencodeRouterEnabled ? "opencodeRouter_pid=$!" : "",
+    `exec ${shQuote(mayaBin)} --host 0.0.0.0 --port ${shQuote(String(SANDBOX_INTERNAL_OPENWORK_PORT))}` +
+      ` --token ${shQuote(options.maya.token)} --host-token ${shQuote(options.maya.hostToken)}` +
       ` --workspace ${shQuote(workspaceDir)}` +
-      ` --approval ${shQuote(options.openwork.approvalMode)}` +
-      ` --approval-timeout ${shQuote(String(options.openwork.approvalTimeoutMs))}` +
-      (options.openwork.readOnly ? " --read-only" : "") +
+      ` --approval ${shQuote(options.maya.approvalMode)}` +
+      ` --approval-timeout ${shQuote(String(options.maya.approvalTimeoutMs))}` +
+      (options.maya.readOnly ? " --read-only" : "") +
       ` --opencode-base-url ${shQuote(`http://127.0.0.1:${SANDBOX_INTERNAL_OPENCODE_PORT}`)}` +
       ` --opencode-directory ${shQuote(workspaceDir)}` +
-      ` ${openworkAuthArgs}` +
-      ` --log-format ${shQuote(options.openwork.logFormat)}` +
-      (options.openwork.opencodeRouterEnabled ? ` --opencode-router-health-port ${shQuote(String(SANDBOX_INTERNAL_OPENCODE_ROUTER_HEALTH_PORT))}` : "") +
-      (openworkCors ? ` ${openworkCors}` : ""),
+      ` ${mayaAuthArgs}` +
+      ` --log-format ${shQuote(options.maya.logFormat)}` +
+      (options.maya.opencodeRouterEnabled ? ` --opencode-router-health-port ${shQuote(String(SANDBOX_INTERNAL_OPENCODE_ROUTER_HEALTH_PORT))}` : "") +
+      (mayaCors ? ` ${mayaCors}` : ""),
   ]
     .filter(Boolean)
     .join("\n");
@@ -2993,15 +2993,15 @@ async function startDockerSandbox(options: {
   persistDir: string;
   opencodeConfigDir: string;
   extraMounts: SandboxMount[];
-  sidecars: { opencode: string; openworkServer: string; opencodeRouter?: string | null };
-  ports: { openwork: number; opencodeRouterHealth?: number | null };
+  sidecars: { opencode: string; mayaServer: string; opencodeRouter?: string | null };
+  ports: { maya: number; opencodeRouterHealth?: number | null };
   opencode: {
     corsOrigins: string[];
     username?: string;
     password?: string;
     hotReload: OpencodeHotReload;
   };
-  openwork: {
+  maya: {
     token: string;
     hostToken: string;
     approvalMode: ApprovalMode;
@@ -3030,16 +3030,16 @@ async function startDockerSandbox(options: {
     opencodeConfigDirInContainer: "/opencode-config",
     backend: "docker",
     opencode: options.opencode,
-    openwork: {
-      token: options.openwork.token,
-      hostToken: options.openwork.hostToken,
-      approvalMode: options.openwork.approvalMode,
-      approvalTimeoutMs: options.openwork.approvalTimeoutMs,
-      readOnly: options.openwork.readOnly,
-      corsOrigins: options.openwork.corsOrigins,
-      opencodeUsername: options.openwork.opencodeUsername,
-      opencodePassword: options.openwork.opencodePassword,
-      logFormat: options.openwork.logFormat,
+    maya: {
+      token: options.maya.token,
+      hostToken: options.maya.hostToken,
+      approvalMode: options.maya.approvalMode,
+      approvalTimeoutMs: options.maya.approvalTimeoutMs,
+      readOnly: options.maya.readOnly,
+      corsOrigins: options.maya.corsOrigins,
+      opencodeUsername: options.maya.opencodeUsername,
+      opencodePassword: options.maya.opencodePassword,
+      logFormat: options.maya.logFormat,
       opencodeRouterEnabled: !!options.sidecars.opencodeRouter,
     },
     runId: options.runId,
@@ -3052,7 +3052,7 @@ async function startDockerSandbox(options: {
     "--name",
     options.containerName,
     "-p",
-    `${options.ports.openwork}:${SANDBOX_INTERNAL_OPENWORK_PORT}`,
+    `${options.ports.maya}:${SANDBOX_INTERNAL_OPENWORK_PORT}`,
     "-v",
     `${options.workspace}:/workspace`,
     "-v",
@@ -3115,15 +3115,15 @@ async function startAppleContainerSandbox(options: {
   persistDir: string;
   opencodeConfigDir: string;
   extraMounts: SandboxMount[];
-  sidecars: { opencode: string; openworkServer: string; opencodeRouter?: string | null };
-  ports: { openwork: number; opencodeRouterHealth?: number | null };
+  sidecars: { opencode: string; mayaServer: string; opencodeRouter?: string | null };
+  ports: { maya: number; opencodeRouterHealth?: number | null };
   opencode: {
     corsOrigins: string[];
     username?: string;
     password?: string;
     hotReload: OpencodeHotReload;
   };
-  openwork: {
+  maya: {
     token: string;
     hostToken: string;
     approvalMode: ApprovalMode;
@@ -3154,16 +3154,16 @@ async function startAppleContainerSandbox(options: {
     opencodeConfigDirInContainer: "/opencode-config",
     backend: "container",
     opencode: options.opencode,
-    openwork: {
-      token: options.openwork.token,
-      hostToken: options.openwork.hostToken,
-      approvalMode: options.openwork.approvalMode,
-      approvalTimeoutMs: options.openwork.approvalTimeoutMs,
-      readOnly: options.openwork.readOnly,
-      corsOrigins: options.openwork.corsOrigins,
-      opencodeUsername: options.openwork.opencodeUsername,
-      opencodePassword: options.openwork.opencodePassword,
-      logFormat: options.openwork.logFormat,
+    maya: {
+      token: options.maya.token,
+      hostToken: options.maya.hostToken,
+      approvalMode: options.maya.approvalMode,
+      approvalTimeoutMs: options.maya.approvalTimeoutMs,
+      readOnly: options.maya.readOnly,
+      corsOrigins: options.maya.corsOrigins,
+      opencodeUsername: options.maya.opencodeUsername,
+      opencodePassword: options.maya.opencodePassword,
+      logFormat: options.maya.logFormat,
       opencodeRouterEnabled: !!options.sidecars.opencodeRouter,
     },
     runId: options.runId,
@@ -3176,7 +3176,7 @@ async function startAppleContainerSandbox(options: {
     "--name",
     options.containerName,
     "-p",
-    `${options.ports.openwork}:${SANDBOX_INTERNAL_OPENWORK_PORT}`,
+    `${options.ports.maya}:${SANDBOX_INTERNAL_OPENWORK_PORT}`,
     "-v",
     `${options.workspace}:/workspace`,
     "-v",
@@ -3254,11 +3254,11 @@ async function verifyOpencodeVersion(binary: ResolvedBinary): Promise<string | u
   const actual = await readCliVersion(binary.bin);
   // When the binary was explicitly provided via --opencode-bin (source "external"),
   // a strict version check would break desktop app users whenever a new opencode
-  // release ships on GitHub before OpenWork updates its bundled binary. Log a
+  // release ships on GitHub before MAYA updates its bundled binary. Log a
   // warning instead of throwing so the caller can still proceed.
   if (binary.source === "external" && binary.expectedVersion && actual && binary.expectedVersion !== actual) {
     process.stderr.write(
-      `[openwork-orchestrator] Warning: opencode version mismatch (expected ${binary.expectedVersion}, got ${actual}). Proceeding with ${binary.bin}.\n`,
+      `[maya-orchestrator] Warning: opencode version mismatch (expected ${binary.expectedVersion}, got ${actual}). Proceeding with ${binary.bin}.\n`,
     );
     return actual;
   }
@@ -3279,13 +3279,13 @@ async function verifyOpenworkServer(input: {
 }): Promise<string | undefined> {
   const health = await fetchJson(`${input.baseUrl}/health`);
   const actualVersion = typeof health?.version === "string" ? health.version : undefined;
-  assertVersionMatch("openwork-server", input.expectedVersion, actualVersion, `${input.baseUrl}/health`);
+  assertVersionMatch("maya-server", input.expectedVersion, actualVersion, `${input.baseUrl}/health`);
 
   const headers = { Authorization: `Bearer ${input.token}` };
   const workspaces = await fetchJson(`${input.baseUrl}/workspaces`, { headers });
   const items = Array.isArray(workspaces?.items) ? (workspaces.items as Array<Record<string, unknown>>) : [];
   if (!items.length) {
-    throw new Error("OpenWork server returned no workspaces");
+    throw new Error("MAYA server returned no workspaces");
   }
 
   const expectedPath = normalizeWorkspacePath(input.expectedWorkspace);
@@ -3302,28 +3302,28 @@ async function verifyOpenworkServer(input: {
     | undefined;
 
   if (!matched) {
-    throw new Error(`OpenWork server workspace mismatch. Expected ${expectedPath}.`);
+    throw new Error(`MAYA server workspace mismatch. Expected ${expectedPath}.`);
   }
 
   const opencode = matched.opencode;
   if (input.expectedOpencodeBaseUrl && opencode?.baseUrl !== input.expectedOpencodeBaseUrl) {
     throw new Error(
-      `OpenWork server OpenCode base URL mismatch: expected ${input.expectedOpencodeBaseUrl}, got ${opencode?.baseUrl ?? "<missing>"}.`,
+      `MAYA server OpenCode base URL mismatch: expected ${input.expectedOpencodeBaseUrl}, got ${opencode?.baseUrl ?? "<missing>"}.`,
     );
   }
   if (input.expectedOpencodeDirectory && opencode?.directory !== input.expectedOpencodeDirectory) {
     throw new Error(
-      `OpenWork server OpenCode directory mismatch: expected ${input.expectedOpencodeDirectory}, got ${opencode?.directory ?? "<missing>"}.`,
+      `MAYA server OpenCode directory mismatch: expected ${input.expectedOpencodeDirectory}, got ${opencode?.directory ?? "<missing>"}.`,
     );
   }
   if (input.expectedOpencodeUsername && opencode?.username !== input.expectedOpencodeUsername) {
-    throw new Error("OpenWork server OpenCode username mismatch.");
+    throw new Error("MAYA server OpenCode username mismatch.");
   }
   if (input.expectedOpencodePassword && opencode?.password !== input.expectedOpencodePassword) {
-    throw new Error("OpenWork server OpenCode password mismatch.");
+    throw new Error("MAYA server OpenCode password mismatch.");
   }
 
-  const hostHeaders = { "X-OpenWork-Host-Token": input.hostToken };
+  const hostHeaders = { "X-MAYA-Host-Token": input.hostToken };
   await fetchJson(`${input.baseUrl}/approvals`, { headers: hostHeaders });
 
   return actualVersion;
@@ -3331,17 +3331,17 @@ async function verifyOpenworkServer(input: {
 
 async function runChecks(input: {
   opencodeClient: ReturnType<typeof createOpencodeClient>;
-  openworkUrl: string;
-  openworkToken: string;
+  mayaUrl: string;
+  mayaToken: string;
   hostToken: string;
   checkEvents: boolean;
 }) {
-  const baseUrl = input.openworkUrl.replace(/\/$/, "");
-  const headers = { Authorization: `Bearer ${input.openworkToken}` };
-  const hostHeaders = { "X-OpenWork-Host-Token": input.hostToken };
+  const baseUrl = input.mayaUrl.replace(/\/$/, "");
+  const headers = { Authorization: `Bearer ${input.mayaToken}` };
+  const hostHeaders = { "X-MAYA-Host-Token": input.hostToken };
   const workspaces = await fetchJson(`${baseUrl}/workspaces`, { headers });
   if (!workspaces?.items?.length) {
-    throw new Error("OpenWork server returned no workspaces");
+    throw new Error("MAYA server returned no workspaces");
   }
 
   const workspaceId = workspaces.items[0].id as string;
@@ -3383,7 +3383,7 @@ async function runChecks(input: {
     }
   }
 
-  const created = await input.opencodeClient.session.create({ title: "OpenWork headless check" });
+  const created = await input.opencodeClient.session.create({ title: "MAYA headless check" });
   const createdSession = unwrap(created);
   unwrap(await input.opencodeClient.session.messages({ sessionID: createdSession.id, limit: 10 }));
 
@@ -3404,7 +3404,7 @@ async function runChecks(input: {
       }
     })();
 
-    unwrap(await input.opencodeClient.session.create({ title: "OpenWork headless check events" }));
+    unwrap(await input.opencodeClient.session.create({ title: "MAYA headless check events" }));
     await new Promise((resolve) => setTimeout(resolve, 1200));
     controller.abort();
     await Promise.race([reader, new Promise((resolve) => setTimeout(resolve, 500))]);
@@ -3417,29 +3417,29 @@ async function runChecks(input: {
 
 /**
  * Lighter check suite for sandbox mode.  Uses only raw HTTP against the
- * openwork-server endpoints — no OpenCode SDK calls that rely on Bearer
+ * maya-server endpoints — no OpenCode SDK calls that rely on Bearer
  * auth through the proxy (since the released server binary may predate our
  * token/proxy changes).
  */
 async function runSandboxChecks(input: {
-  openworkUrl: string;
-  openworkToken: string;
+  mayaUrl: string;
+  mayaToken: string;
   hostToken: string;
 }) {
-  const baseUrl = input.openworkUrl.replace(/\/$/, "");
-  const headers = { Authorization: `Bearer ${input.openworkToken}` };
-  const hostHeaders = { "X-OpenWork-Host-Token": input.hostToken };
+  const baseUrl = input.mayaUrl.replace(/\/$/, "");
+  const headers = { Authorization: `Bearer ${input.mayaToken}` };
+  const hostHeaders = { "X-MAYA-Host-Token": input.hostToken };
 
   // 1. Server health
   const health = await fetchJson(`${baseUrl}/health`);
   if (!health || typeof health !== "object") {
-    throw new Error("openwork-server /health returned invalid payload");
+    throw new Error("maya-server /health returned invalid payload");
   }
 
   // 2. Workspaces list
   const workspaces = await fetchJson(`${baseUrl}/workspaces`, { headers });
   if (!workspaces?.items?.length) {
-    throw new Error("openwork-server returned no workspaces");
+    throw new Error("maya-server returned no workspaces");
   }
   const workspaceId = workspaces.items[0].id as string;
 
@@ -3563,7 +3563,7 @@ function outputError(error: unknown, json: boolean): void {
   console.error(message);
 }
 
-function createVerboseLogger(enabled: boolean, logger?: Logger, component = "openwork-orchestrator") {
+function createVerboseLogger(enabled: boolean, logger?: Logger, component = "maya-orchestrator") {
   return (message: string) => {
     if (!enabled) return;
     if (logger) {
@@ -3648,11 +3648,11 @@ function createLogger(options: {
   const output = options.output ?? "stdout";
   const colorEnabled = options.color ?? false;
   const componentColors: Record<string, string> = {
-    "openwork-orchestrator": ANSI.gray,
+    "maya-orchestrator": ANSI.gray,
     opencode: ANSI.cyan,
-    "openwork-server": ANSI.green,
+    "maya-server": ANSI.green,
     opencodeRouter: ANSI.magenta,
-    "openwork-orchestrator-router": ANSI.cyan,
+    "maya-orchestrator-router": ANSI.cyan,
   };
   const levelColors: Record<LogLevel, string> = {
     debug: ANSI.gray,
@@ -4014,12 +4014,12 @@ async function runRouterDaemon(args: ParsedArgs) {
   const logger = createLogger({
     format: logFormat,
     runId,
-    serviceName: "openwork-orchestrator",
+    serviceName: "maya-orchestrator",
     serviceVersion: cliVersion,
     output: "stdout",
     color: colorEnabled,
   });
-  const logVerbose = createVerboseLogger(verbose && !outputJson, logger, "openwork-orchestrator");
+  const logVerbose = createVerboseLogger(verbose && !outputJson, logger, "maya-orchestrator");
   const sidecarSourceInput = readBinarySource(args.flags, "sidecar-source", "auto", "OPENWORK_SIDECAR_SOURCE");
   const opencodeSourceInput = readBinarySource(args.flags, "opencode-source", "auto", "OPENWORK_OPENCODE_SOURCE");
   const sidecarSource = sidecarSourceInput;
@@ -4082,7 +4082,7 @@ async function runRouterDaemon(args: ParsedArgs) {
   logger.info(
     "Daemon starting",
     { runId, logFormat, workdir: resolvedWorkdir, host, port },
-    "openwork-orchestrator",
+    "maya-orchestrator",
   );
 
   const sidecar = resolveSidecarConfig(args.flags, cliVersion);
@@ -4209,7 +4209,7 @@ async function runRouterDaemon(args: ParsedArgs) {
           durationMs: Date.now() - startedAt,
           activeId: state.activeId,
         },
-        "openwork-orchestrator-router",
+        "maya-orchestrator-router",
       );
     });
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -4403,7 +4403,7 @@ async function runRouterDaemon(args: ParsedArgs) {
   });
 
   const shutdown = async () => {
-    logger.info("Daemon shutting down", { host, port }, "openwork-orchestrator-router");
+    logger.info("Daemon shutting down", { host, port }, "maya-orchestrator-router");
     try {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     } catch {
@@ -4435,7 +4435,7 @@ async function runRouterDaemon(args: ParsedArgs) {
       outputResult({ ok: true, daemon: state.daemon }, true);
     } else {
       if (logFormat === "json") {
-        logger.info("Daemon running", { host, port }, "openwork-orchestrator-router");
+        logger.info("Daemon running", { host, port }, "maya-orchestrator-router");
       } else {
         console.log(`orchestrator daemon running on ${host}:${port}`);
       }
@@ -4447,23 +4447,23 @@ async function runRouterDaemon(args: ParsedArgs) {
   await new Promise(() => undefined);
 }
 
-function readOpenworkClientAuth(args: ParsedArgs): { openworkUrl: string; token: string } {
-  const openworkUrl =
-    readFlag(args.flags, "openwork-url") ??
+function readOpenworkClientAuth(args: ParsedArgs): { mayaUrl: string; token: string } {
+  const mayaUrl =
+    readFlag(args.flags, "maya-url") ??
     process.env.OPENWORK_URL ??
     process.env.OPENWORK_SERVER_URL ??
     "";
   const token =
     readFlag(args.flags, "token") ??
-    readFlag(args.flags, "openwork-token") ??
+    readFlag(args.flags, "maya-token") ??
     process.env.OPENWORK_TOKEN ??
     "";
 
-  if (!openworkUrl || !token) {
-    throw new Error("openwork-url and token are required");
+  if (!mayaUrl || !token) {
+    throw new Error("maya-url and token are required");
   }
 
-  return { openworkUrl, token };
+  return { mayaUrl, token };
 }
 
 function readSessionId(args: ParsedArgs, fallbackIndex: number): string {
@@ -4478,8 +4478,8 @@ function readSessionId(args: ParsedArgs, fallbackIndex: number): string {
 async function runFiles(args: ParsedArgs) {
   const outputJson = readBool(args.flags, "json", false);
   const subcommand = args.positionals[1] ?? "";
-  const { openworkUrl, token } = readOpenworkClientAuth(args);
-  const baseUrl = openworkUrl.replace(/\/$/, "");
+  const { mayaUrl, token } = readOpenworkClientAuth(args);
+  const baseUrl = mayaUrl.replace(/\/$/, "");
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
@@ -4685,24 +4685,24 @@ async function runApprovals(args: ParsedArgs) {
     throw new Error("approvals requires 'list' or 'reply'");
   }
 
-  const openworkUrl =
-    readFlag(args.flags, "openwork-url") ??
+  const mayaUrl =
+    readFlag(args.flags, "maya-url") ??
     process.env.OPENWORK_URL ??
     process.env.OPENWORK_SERVER_URL ??
     "";
   const hostToken = readFlag(args.flags, "host-token") ?? process.env.OPENWORK_HOST_TOKEN ?? "";
 
-  if (!openworkUrl || !hostToken) {
-    throw new Error("openwork-url and host-token are required for approvals");
+  if (!mayaUrl || !hostToken) {
+    throw new Error("maya-url and host-token are required for approvals");
   }
 
   const headers = {
     "Content-Type": "application/json",
-    "X-OpenWork-Host-Token": hostToken,
+    "X-MAYA-Host-Token": hostToken,
   };
 
   if (subcommand === "list") {
-    const response = await fetch(`${openworkUrl.replace(/\/$/, "")}/approvals`, { headers });
+    const response = await fetch(`${mayaUrl.replace(/\/$/, "")}/approvals`, { headers });
     if (!response.ok) {
       throw new Error(`Failed to list approvals: ${response.status}`);
     }
@@ -4723,7 +4723,7 @@ async function runApprovals(args: ParsedArgs) {
   }
 
   const payload = { reply: allow ? "allow" : "deny" };
-  const response = await fetch(`${openworkUrl.replace(/\/$/, "")}/approvals/${approvalId}`, {
+  const response = await fetch(`${mayaUrl.replace(/\/$/, "")}/approvals/${approvalId}`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -4736,7 +4736,7 @@ async function runApprovals(args: ParsedArgs) {
 }
 
 async function runStatus(args: ParsedArgs) {
-  const openworkUrl = readFlag(args.flags, "openwork-url") ?? process.env.OPENWORK_URL ?? "";
+  const mayaUrl = readFlag(args.flags, "maya-url") ?? process.env.OPENWORK_URL ?? "";
   const opencodeUrl = readFlag(args.flags, "opencode-url") ?? process.env.OPENCODE_URL ?? "";
   const username = readFlag(args.flags, "opencode-username") ?? process.env.OPENCODE_SERVER_USERNAME;
   const password = readFlag(args.flags, "opencode-password") ?? process.env.OPENCODE_SERVER_PASSWORD;
@@ -4744,12 +4744,12 @@ async function runStatus(args: ParsedArgs) {
 
   const status: Record<string, unknown> = {};
 
-  if (openworkUrl) {
+  if (mayaUrl) {
     try {
-      await waitForHealthy(openworkUrl, 5000, 400);
-      status.openwork = { ok: true, url: openworkUrl };
+      await waitForHealthy(mayaUrl, 5000, 400);
+      status.maya = { ok: true, url: mayaUrl };
     } catch (error) {
-      status.openwork = { ok: false, url: openworkUrl, error: String(error) };
+      status.maya = { ok: false, url: mayaUrl, error: String(error) };
     }
   }
 
@@ -4773,10 +4773,10 @@ async function runStatus(args: ParsedArgs) {
   if (outputJson) {
     console.log(JSON.stringify(status, null, 2));
   } else {
-    if (status.openwork) {
-      const openwork = status.openwork as { ok: boolean; url: string; error?: string };
-      console.log(`OpenWork server: ${openwork.ok ? "ok" : "error"} (${openwork.url})`);
-      if (openwork.error) console.log(`  ${openwork.error}`);
+    if (status.maya) {
+      const maya = status.maya as { ok: boolean; url: string; error?: string };
+      console.log(`MAYA server: ${maya.ok ? "ok" : "error"} (${maya.url})`);
+      if (maya.error) console.log(`  ${maya.error}`);
     }
     if (status.opencode) {
       const opencode = status.opencode as { ok: boolean; url: string; error?: string };
@@ -4806,11 +4806,11 @@ async function runStart(args: ParsedArgs) {
   const baseLoggerOptions = {
     format: logFormat,
     runId,
-    serviceName: "openwork-orchestrator",
+    serviceName: "maya-orchestrator",
     serviceVersion: cliVersion,
     onLog: (event: LogEvent) => {
       if (!tui) return;
-      const component = event.component ?? "openwork-orchestrator";
+      const component = event.component ?? "maya-orchestrator";
       const tuiComponent = component === "opencode-router" ? "router" : component;
       tui.pushLog({
         time: event.time,
@@ -4825,7 +4825,7 @@ async function runStart(args: ParsedArgs) {
     output: useTui ? "silent" : "stdout",
     color: useTui ? false : colorPreferred,
   });
-  let logVerbose = createVerboseLogger(verbose && !outputJson, logger, "openwork-orchestrator");
+  let logVerbose = createVerboseLogger(verbose && !outputJson, logger, "maya-orchestrator");
   const switchToPlainOutput = (error: string) => {
     if (!useTui) return;
     useTui = false;
@@ -4838,11 +4838,11 @@ async function runStart(args: ParsedArgs) {
       output: "stdout",
       color: colorPreferred,
     });
-    logVerbose = createVerboseLogger(verbose && !outputJson, logger, "openwork-orchestrator");
+    logVerbose = createVerboseLogger(verbose && !outputJson, logger, "maya-orchestrator");
     logger.warn(
-      "TUI failed to start; falling back to plain output. Use `openwork serve` for explicit non-TUI mode.",
+      "TUI failed to start; falling back to plain output. Use `maya serve` for explicit non-TUI mode.",
       { error },
-      "openwork-orchestrator",
+      "maya-orchestrator",
     );
   };
   const sidecarSourceInput = readBinarySource(args.flags, "sidecar-source", "auto", "OPENWORK_SIDECAR_SOURCE");
@@ -4850,7 +4850,7 @@ async function runStart(args: ParsedArgs) {
 
   const workspace = readFlag(args.flags, "workspace") ?? process.env.OPENWORK_WORKSPACE ?? process.cwd();
   const resolvedWorkspace = await ensureWorkspace(workspace);
-  logger.info("Run starting", { workspace: resolvedWorkspace, logFormat, runId }, "openwork-orchestrator");
+  logger.info("Run starting", { workspace: resolvedWorkspace, logFormat, runId }, "maya-orchestrator");
 
   const sandboxRequested = readSandboxMode(args.flags, "sandbox", "none", "OPENWORK_SANDBOX");
   const sandboxMode = await resolveSandboxMode(sandboxRequested);
@@ -4885,7 +4885,7 @@ async function runStart(args: ParsedArgs) {
       : [];
 
   const explicitOpencodeBin = readFlag(args.flags, "opencode-bin") ?? process.env.OPENWORK_OPENCODE_BIN;
-  const explicitOpenworkServerBin = readFlag(args.flags, "openwork-server-bin") ?? process.env.OPENWORK_SERVER_BIN;
+  const explicitOpenworkServerBin = readFlag(args.flags, "maya-server-bin") ?? process.env.OPENWORK_SERVER_BIN;
   const explicitOpenCodeRouterBin = readFlag(args.flags, "opencode-router-bin") ?? process.env.OPENCODE_ROUTER_BIN;
   const opencodeBindHost = readFlag(args.flags, "opencode-host") ?? process.env.OPENWORK_OPENCODE_BIND_HOST ?? "0.0.0.0";
   const opencodePort =
@@ -4916,9 +4916,9 @@ async function runStart(args: ParsedArgs) {
     ? readFlag(args.flags, "opencode-password") ?? process.env.OPENWORK_OPENCODE_PASSWORD ?? randomUUID()
     : undefined;
 
-  const openworkHost = readFlag(args.flags, "openwork-host") ?? process.env.OPENWORK_HOST ?? "0.0.0.0";
-  const openworkPort = await resolvePort(
-    readNumber(args.flags, "openwork-port", undefined, "OPENWORK_PORT"),
+  const mayaHost = readFlag(args.flags, "maya-host") ?? process.env.OPENWORK_HOST ?? "0.0.0.0";
+  const mayaPort = await resolvePort(
+    readNumber(args.flags, "maya-port", undefined, "OPENWORK_PORT"),
     "127.0.0.1",
   );
   // Always choose a free opencodeRouter health port by default (avoid conflicts with
@@ -4927,8 +4927,8 @@ async function runStart(args: ParsedArgs) {
     readNumber(args.flags, "opencode-router-health-port", undefined, "OPENCODE_ROUTER_HEALTH_PORT"),
     "127.0.0.1",
   );
-  const openworkToken = readFlag(args.flags, "openwork-token") ?? process.env.OPENWORK_TOKEN ?? randomUUID();
-  const openworkHostToken = readFlag(args.flags, "openwork-host-token") ?? process.env.OPENWORK_HOST_TOKEN ?? randomUUID();
+  const mayaToken = readFlag(args.flags, "maya-token") ?? process.env.OPENWORK_TOKEN ?? randomUUID();
+  const mayaHostToken = readFlag(args.flags, "maya-host-token") ?? process.env.OPENWORK_HOST_TOKEN ?? randomUUID();
   const approvalMode =
     (readFlag(args.flags, "approval") as ApprovalMode | undefined) ??
     (process.env.OPENWORK_APPROVAL_MODE as ApprovalMode | undefined) ??
@@ -5022,7 +5022,7 @@ async function runStart(args: ParsedArgs) {
     false,
     "OPENWORK_OPENCODE_ROUTER_REQUIRED",
   );
-  const openworkServerBinary = await resolveOpenworkServerBin({
+  const mayaServerBinary = await resolveOpenworkServerBin({
     explicit: explicitOpenworkServerBin,
     manifest,
     allowExternal,
@@ -5042,32 +5042,32 @@ async function runStart(args: ParsedArgs) {
   if (sandboxMode !== "none") {
     // Ensure the binaries we stage into the container are actual files.
     await assertSandboxBinaryFile("opencode", opencodeBinary.bin);
-    await assertSandboxBinaryFile("openwork-server", openworkServerBinary.bin);
+    await assertSandboxBinaryFile("maya-server", mayaServerBinary.bin);
     if (opencodeRouterBinary) {
       await assertSandboxBinaryFile("opencode-router", opencodeRouterBinary.bin);
     }
   }
   let opencodeRouterActualVersion: string | undefined;
   logVerbose(`opencode bin: ${opencodeBinary.bin} (${opencodeBinary.source})`);
-  logVerbose(`openwork-server bin: ${openworkServerBinary.bin} (${openworkServerBinary.source})`);
+  logVerbose(`maya-server bin: ${mayaServerBinary.bin} (${mayaServerBinary.source})`);
   if (opencodeRouterBinary) {
     logVerbose(`opencodeRouter bin: ${opencodeRouterBinary.bin} (${opencodeRouterBinary.source})`);
   }
 
-  const openworkBaseUrl = `http://127.0.0.1:${openworkPort}`;
-  const openworkConnect = resolveConnectUrl(openworkPort, connectHost);
-  const openworkConnectUrl = openworkConnect.connectUrl ?? openworkBaseUrl;
+  const mayaBaseUrl = `http://127.0.0.1:${mayaPort}`;
+  const mayaConnect = resolveConnectUrl(mayaPort, connectHost);
+  const mayaConnectUrl = mayaConnect.connectUrl ?? mayaBaseUrl;
 
   const opencodeBaseUrl =
-    sandboxMode !== "none" ? `${openworkBaseUrl}/opencode` : `http://127.0.0.1:${opencodePort}`;
+    sandboxMode !== "none" ? `${mayaBaseUrl}/opencode` : `http://127.0.0.1:${opencodePort}`;
   const opencodeConnectUrl =
     sandboxMode !== "none"
-      ? `${openworkConnectUrl.replace(/\/$/, "")}/opencode`
+      ? `${mayaConnectUrl.replace(/\/$/, "")}/opencode`
       : (resolveConnectUrl(opencodePort, connectHost).connectUrl ?? opencodeBaseUrl);
 
   const attachCommand =
     sandboxMode !== "none"
-      ? `OpenCode is proxied via ${opencodeConnectUrl} (requires OpenWork token)`
+      ? `OpenCode is proxied via ${opencodeConnectUrl} (requires MAYA token)`
       : buildAttachCommand({
           url: opencodeConnectUrl,
           workspace: resolvedWorkspace,
@@ -5106,7 +5106,7 @@ async function runStart(args: ParsedArgs) {
     logger.info(
       "Shutting down",
       { children: children.map((handle) => handle.name) },
-      "openwork-orchestrator",
+      "maya-orchestrator",
     );
     if (sandboxContainerName && sandboxStop) {
       await sandboxStop(sandboxContainerName);
@@ -5158,8 +5158,8 @@ async function runStart(args: ParsedArgs) {
             `Stop: ${sandboxStopCommand} ${sandboxContainerName}`,
           ]
         : []),
-      `OpenWork URL: ${openworkConnectUrl}`,
-      `OpenWork Token: ${openworkToken}`,
+      `MAYA URL: ${mayaConnectUrl}`,
+      `MAYA Token: ${mayaToken}`,
       `OpenCode URL: ${opencodeConnectUrl}`,
       `Attach: ${attachCommand}`,
     ].join("\n");
@@ -5183,8 +5183,8 @@ async function runStart(args: ParsedArgs) {
           .join(" ");
         if (
           text.includes("React is not defined") ||
-          text.includes("/$bunfs/root/openwork-orchestrator") ||
-          text.includes("/$bunfs/root/openwork")
+          text.includes("/$bunfs/root/maya-orchestrator") ||
+          text.includes("/$bunfs/root/maya")
         ) {
           switchToPlainOutput(text);
         }
@@ -5198,9 +5198,9 @@ async function runStart(args: ParsedArgs) {
         connect: {
           runId,
           workspace: resolvedWorkspace,
-          openworkUrl: openworkConnectUrl,
-          openworkToken,
-          hostToken: openworkHostToken,
+          mayaUrl: mayaConnectUrl,
+          mayaToken,
+          hostToken: mayaHostToken,
           opencodeUrl: opencodeConnectUrl,
           opencodePassword: sandboxMode !== "none" ? undefined : (opencodePassword ?? undefined),
           opencodeUsername: sandboxMode !== "none" ? undefined : (opencodeUsername ?? undefined),
@@ -5208,7 +5208,7 @@ async function runStart(args: ParsedArgs) {
         },
         services: [
           { name: "opencode", label: "opencode", status: "starting", port: opencodePort },
-          { name: "openwork-server", label: "openwork-server", status: "starting", port: openworkPort },
+          { name: "maya-server", label: "maya-server", status: "starting", port: mayaPort },
           {
             name: "router",
             label: "opencode-router",
@@ -5223,22 +5223,22 @@ async function runStart(args: ParsedArgs) {
           return { command: attachCommand, ...result };
         },
         onCopySelection: async (text) => copyToClipboard(text),
-        onRouterHealth: async () => fetchOpenCodeRouterHealthViaOpenwork(openworkBaseUrl, openworkToken),
+        onRouterHealth: async () => fetchOpenCodeRouterHealthViaOpenwork(mayaBaseUrl, mayaToken),
         onRouterTelegramIdentities: async () => {
-          const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/identities/telegram`;
+          const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/identities/telegram`;
           const result = await fetchJson(url, {
             headers: {
-              "X-OpenWork-Host-Token": openworkHostToken,
+              "X-MAYA-Host-Token": mayaHostToken,
             },
           });
           const items = Array.isArray(result?.items) ? result.items : [];
           return { items };
         },
         onRouterSlackIdentities: async () => {
-          const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/identities/slack`;
+          const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/identities/slack`;
           const result = await fetchJson(url, {
             headers: {
-              "X-OpenWork-Host-Token": openworkHostToken,
+              "X-MAYA-Host-Token": mayaHostToken,
             },
           });
           const items = Array.isArray(result?.items) ? result.items : [];
@@ -5246,12 +5246,12 @@ async function runStart(args: ParsedArgs) {
         },
         onRouterSetGroupsEnabled: async (enabled) => {
           try {
-            const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/config/groups`;
+            const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/config/groups`;
             await fetchJson(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-OpenWork-Host-Token": openworkHostToken,
+                "X-MAYA-Host-Token": mayaHostToken,
               },
               body: JSON.stringify({ enabled }),
             });
@@ -5262,12 +5262,12 @@ async function runStart(args: ParsedArgs) {
         },
         onRouterSetTelegramToken: async (token) => {
           try {
-            const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/identities/telegram`;
+            const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/identities/telegram`;
             await fetchJson(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-OpenWork-Host-Token": openworkHostToken,
+                "X-MAYA-Host-Token": mayaHostToken,
               },
               body: JSON.stringify({ id: "default", token, enabled: true }),
             });
@@ -5278,12 +5278,12 @@ async function runStart(args: ParsedArgs) {
         },
         onRouterSetSlackTokens: async (botToken, appToken) => {
           try {
-            const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/identities/slack`;
+            const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/identities/slack`;
             await fetchJson(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-OpenWork-Host-Token": openworkHostToken,
+                "X-MAYA-Host-Token": mayaHostToken,
               },
               body: JSON.stringify({ id: "default", botToken, appToken, enabled: true }),
             });
@@ -5306,7 +5306,7 @@ async function runStart(args: ParsedArgs) {
     const reason = code !== null ? `code ${code}` : signal ? `signal ${signal}` : "unknown";
     const services =
       name === "sandbox"
-        ? ["opencode", "openwork-server", "router"]
+        ? ["opencode", "maya-server", "router"]
         : [tuiServiceName(name)];
     for (const service of services) {
       tui?.updateService(service, { status: "stopped", message: reason });
@@ -5325,11 +5325,11 @@ async function runStart(args: ParsedArgs) {
   try {
     const opencodeActualVersion =
       sandboxMode !== "none" ? opencodeBinary.expectedVersion : await verifyOpencodeVersion(opencodeBinary);
-    let openworkActualVersion: string | undefined;
+    let mayaActualVersion: string | undefined;
     let opencodeClient: ReturnType<typeof createOpencodeClient>;
 
     if (sandboxMode !== "none") {
-      const containerName = `openwork-orchestrator-${runId.replace(/[^a-zA-Z0-9_.-]+/g, "-").slice(0, 24)}`;
+      const containerName = `maya-orchestrator-${runId.replace(/[^a-zA-Z0-9_.-]+/g, "-").slice(0, 24)}`;
       sandboxContainerName = containerName;
 
       sandboxStop = sandboxMode === "container" ? stopAppleContainer : stopDockerContainer;
@@ -5346,12 +5346,12 @@ async function runStart(args: ParsedArgs) {
         extraMounts: sandboxExtraMounts,
         sidecars: {
           opencode: opencodeBinary.bin,
-          openworkServer: openworkServerBinary.bin,
+          mayaServer: mayaServerBinary.bin,
           opencodeRouter: opencodeRouterEnabled ? (opencodeRouterBinary?.bin ?? null) : null,
         },
         ports: {
-          openwork: openworkPort,
-          // In sandbox mode, opencodeRouter is only reachable via openwork-server
+          maya: mayaPort,
+          // In sandbox mode, opencodeRouter is only reachable via maya-server
           // proxy (/opencode-router/*). Do not publish a separate host port.
           opencodeRouterHealth: null,
         },
@@ -5361,9 +5361,9 @@ async function runStart(args: ParsedArgs) {
           password: opencodePassword,
           hotReload: opencodeHotReload,
         },
-        openwork: {
-          token: openworkToken,
-          hostToken: openworkHostToken,
+        maya: {
+          token: mayaToken,
+          hostToken: mayaHostToken,
           approvalMode: approvalMode === "auto" ? "auto" : "manual",
           approvalTimeoutMs,
           readOnly,
@@ -5380,7 +5380,7 @@ async function runStart(args: ParsedArgs) {
 
       sandboxCleanup = sandboxChild.cleanup;
       tui?.updateService("opencode", { status: "running", port: SANDBOX_INTERNAL_OPENCODE_PORT });
-      tui?.updateService("openwork-server", { status: "running", port: openworkPort });
+      tui?.updateService("maya-server", { status: "running", port: mayaPort });
       if (opencodeRouterEnabled) {
         tui?.updateService("router", { status: "running", port: undefined });
       }
@@ -5395,32 +5395,32 @@ async function runStart(args: ParsedArgs) {
         logger.info("Sandbox detached", { containerName }, "sandbox");
       }
 
-      logger.info("Waiting for health", { url: openworkBaseUrl }, "openwork-server");
-      await waitForHealthy(openworkBaseUrl);
-      logger.info("Healthy", { url: openworkBaseUrl }, "openwork-server");
-      tui?.updateService("openwork-server", { status: "healthy" });
+      logger.info("Waiting for health", { url: mayaBaseUrl }, "maya-server");
+      await waitForHealthy(mayaBaseUrl);
+      logger.info("Healthy", { url: mayaBaseUrl }, "maya-server");
+      tui?.updateService("maya-server", { status: "healthy" });
 
       opencodeClient = createOpencodeClient({
-        baseUrl: `${openworkBaseUrl.replace(/\/$/, "")}/opencode`,
-        headers: { Authorization: `Bearer ${openworkToken}` },
+        baseUrl: `${mayaBaseUrl.replace(/\/$/, "")}/opencode`,
+        headers: { Authorization: `Bearer ${mayaToken}` },
       });
 
-      // In sandbox mode, the released openwork-server binary may not have our
+      // In sandbox mode, the released maya-server binary may not have our
       // latest proxy/auth changes yet.  Instead of using the OpenCode SDK client
       // (which relies on the proxy handling Bearer tokens), do a direct health
-      // check against the openwork-server's own /opencode proxy path.  If the
+      // check against the maya-server's own /opencode proxy path.  If the
       // server is healthy *and* is proxying to a healthy opencode, we're good.
-      logger.info("Waiting for health (proxy)", { url: `${openworkBaseUrl}/opencode` }, "opencode");
-      await waitForHealthyViaProxy(`${openworkBaseUrl.replace(/\/$/, "")}/opencode`, openworkToken);
-      logger.info("Healthy (proxy)", { url: `${openworkBaseUrl}/opencode` }, "opencode");
+      logger.info("Waiting for health (proxy)", { url: `${mayaBaseUrl}/opencode` }, "opencode");
+      await waitForHealthyViaProxy(`${mayaBaseUrl.replace(/\/$/, "")}/opencode`, mayaToken);
+      logger.info("Healthy (proxy)", { url: `${mayaBaseUrl}/opencode` }, "opencode");
       tui?.updateService("opencode", { status: "healthy" });
 
       try {
-        openworkActualVersion = await verifyOpenworkServer({
-          baseUrl: openworkBaseUrl,
-          token: openworkToken,
-          hostToken: openworkHostToken,
-          expectedVersion: openworkServerBinary.expectedVersion,
+        mayaActualVersion = await verifyOpenworkServer({
+          baseUrl: mayaBaseUrl,
+          token: mayaToken,
+          hostToken: mayaHostToken,
+          expectedVersion: mayaServerBinary.expectedVersion,
           expectedWorkspace: "/workspace",
           expectedOpencodeBaseUrl: opencodeInternalBaseUrl,
           expectedOpencodeDirectory: "/workspace",
@@ -5432,9 +5432,9 @@ async function runStart(args: ParsedArgs) {
         // expected version or lack capabilities we just added locally.  Log
         // the mismatch but don't abort — the health checks above already
         // proved the server is running and proxying correctly.
-        logger.warn("Sandbox server verification warning (non-fatal)", { error: String(verifyError) }, "openwork-server");
+        logger.warn("Sandbox server verification warning (non-fatal)", { error: String(verifyError) }, "maya-server");
       }
-      logVerbose(`openwork-server version: ${openworkActualVersion ?? "unknown"}`);
+      logVerbose(`maya-server version: ${mayaActualVersion ?? "unknown"}`);
     } else {
       const opencodeChild = await startOpencode({
         bin: opencodeBinary.bin,
@@ -5542,13 +5542,13 @@ async function runStart(args: ParsedArgs) {
         }
       }
 
-      const openworkChild = await startOpenworkServer({
-        bin: openworkServerBinary.bin,
-        host: openworkHost,
-        port: openworkPort,
+      const mayaChild = await startOpenworkServer({
+        bin: mayaServerBinary.bin,
+        host: mayaHost,
+        port: mayaPort,
         workspace: resolvedWorkspace,
-        token: openworkToken,
-        hostToken: openworkHostToken,
+        token: mayaToken,
+        hostToken: mayaHostToken,
         approvalMode: approvalMode === "auto" ? "auto" : "manual",
         approvalTimeoutMs,
         readOnly,
@@ -5563,37 +5563,37 @@ async function runStart(args: ParsedArgs) {
         runId,
         logFormat,
       });
-      children.push({ name: "openwork-server", child: openworkChild });
-      tui?.updateService("openwork-server", {
+      children.push({ name: "maya-server", child: mayaChild });
+      tui?.updateService("maya-server", {
         status: "running",
-        pid: openworkChild.pid ?? undefined,
-        port: openworkPort,
+        pid: mayaChild.pid ?? undefined,
+        port: mayaPort,
       });
-      logger.info("Process spawned", { pid: openworkChild.pid ?? 0 }, "openwork-server");
-      openworkChild.on("exit", (code, signal) => handleExit("openwork-server", code, signal));
-      openworkChild.on("error", (error) => handleSpawnError("openwork-server", error));
+      logger.info("Process spawned", { pid: mayaChild.pid ?? 0 }, "maya-server");
+      mayaChild.on("exit", (code, signal) => handleExit("maya-server", code, signal));
+      mayaChild.on("error", (error) => handleSpawnError("maya-server", error));
 
-      logger.info("Waiting for health", { url: openworkBaseUrl }, "openwork-server");
-      await waitForHealthy(openworkBaseUrl);
-      logger.info("Healthy", { url: openworkBaseUrl }, "openwork-server");
-      tui?.updateService("openwork-server", { status: "healthy" });
+      logger.info("Waiting for health", { url: mayaBaseUrl }, "maya-server");
+      await waitForHealthy(mayaBaseUrl);
+      logger.info("Healthy", { url: mayaBaseUrl }, "maya-server");
+      tui?.updateService("maya-server", { status: "healthy" });
 
-      openworkActualVersion = await verifyOpenworkServer({
-        baseUrl: openworkBaseUrl,
-        token: openworkToken,
-        hostToken: openworkHostToken,
-        expectedVersion: openworkServerBinary.expectedVersion,
+      mayaActualVersion = await verifyOpenworkServer({
+        baseUrl: mayaBaseUrl,
+        token: mayaToken,
+        hostToken: mayaHostToken,
+        expectedVersion: mayaServerBinary.expectedVersion,
         expectedWorkspace: resolvedWorkspace,
         expectedOpencodeBaseUrl: opencodeConnectUrl,
         expectedOpencodeDirectory: resolvedWorkspace,
         expectedOpencodeUsername: opencodeUsername,
         expectedOpencodePassword: opencodePassword,
       });
-      logVerbose(`openwork-server version: ${openworkActualVersion ?? "unknown"}`);
+      logVerbose(`maya-server version: ${mayaActualVersion ?? "unknown"}`);
 
       if (opencodeRouterReady && !opencodeRouterHealthInterval) {
         opencodeRouterHealthInterval = setInterval(() => {
-          fetchOpenCodeRouterHealthViaOpenwork(openworkBaseUrl, openworkToken)
+          fetchOpenCodeRouterHealthViaOpenwork(mayaBaseUrl, mayaToken)
             .then((health) => {
               tui?.setRouterHealth(health);
               if (health.ok) {
@@ -5611,9 +5611,9 @@ async function runStart(args: ParsedArgs) {
         opencodeRouterActualVersion = opencodeRouterBinary?.expectedVersion;
         logVerbose(`opencodeRouter version: ${opencodeRouterActualVersion ?? "unknown"}`);
         try {
-          const url = `${openworkBaseUrl.replace(/\/$/, "")}/opencode-router/health`;
+          const url = `${mayaBaseUrl.replace(/\/$/, "")}/opencode-router/health`;
           logger.info("Waiting for health", { url }, "opencode-router");
-          const health = await waitForOpenCodeRouterHealthyViaOpenwork(openworkBaseUrl, openworkToken);
+          const health = await waitForOpenCodeRouterHealthyViaOpenwork(mayaBaseUrl, mayaToken);
           tui?.setRouterHealth(health);
           tui?.updateService("router", { status: health.ok ? "healthy" : "running" });
           logger.info("Healthy", { url, ok: health.ok }, "opencode-router");
@@ -5623,7 +5623,7 @@ async function runStart(args: ParsedArgs) {
         }
         if (!opencodeRouterHealthInterval) {
           opencodeRouterHealthInterval = setInterval(() => {
-            fetchOpenCodeRouterHealthViaOpenwork(openworkBaseUrl, openworkToken)
+            fetchOpenCodeRouterHealthViaOpenwork(mayaBaseUrl, mayaToken)
               .then((health) => {
                 tui?.setRouterHealth(health);
                 if (health.ok) {
@@ -5634,7 +5634,7 @@ async function runStart(args: ParsedArgs) {
           }, 15_000);
         }
       } else {
-        // In host mode, opencodeRouter is started before openwork-server so we can
+        // In host mode, opencodeRouter is started before maya-server so we can
         // confirm health before wiring the proxy.
       }
     }
@@ -5657,14 +5657,14 @@ async function runStart(args: ParsedArgs) {
         hotReload: opencodeHotReload,
         version: opencodeActualVersion,
       },
-      openwork: {
-        baseUrl: openworkBaseUrl,
-        connectUrl: openworkConnectUrl,
-        host: openworkHost,
-        port: openworkPort,
-        token: openworkToken,
-        hostToken: openworkHostToken,
-        version: openworkActualVersion,
+      maya: {
+        baseUrl: mayaBaseUrl,
+        connectUrl: mayaConnectUrl,
+        host: mayaHost,
+        port: mayaPort,
+        token: mayaToken,
+        hostToken: mayaHostToken,
+        version: mayaActualVersion,
       },
       opencodeRouter: {
         enabled: opencodeRouterEnabled,
@@ -5689,11 +5689,11 @@ async function runStart(args: ParsedArgs) {
             expectedVersion: opencodeBinary.expectedVersion,
             actualVersion: opencodeActualVersion,
           } as BinaryDiagnostics,
-          openworkServer: {
-            path: openworkServerBinary.bin,
-            source: openworkServerBinary.source,
-            expectedVersion: openworkServerBinary.expectedVersion,
-            actualVersion: openworkActualVersion,
+          mayaServer: {
+            path: mayaServerBinary.bin,
+            source: mayaServerBinary.source,
+            expectedVersion: mayaServerBinary.expectedVersion,
+            actualVersion: mayaActualVersion,
           } as BinaryDiagnostics,
           opencodeRouter: opencodeRouterBinary
             ? ({
@@ -5715,10 +5715,10 @@ async function runStart(args: ParsedArgs) {
         {
           workspace: payload.workspace,
           opencode: payload.opencode,
-          openwork: payload.openwork,
+          maya: payload.maya,
           opencodeRouter: payload.opencodeRouter,
         },
-        "openwork-orchestrator",
+        "maya-orchestrator",
       );
     } else if (logFormat === "json") {
       logger.info(
@@ -5726,13 +5726,13 @@ async function runStart(args: ParsedArgs) {
         {
           workspace: payload.workspace,
           opencode: payload.opencode,
-          openwork: payload.openwork,
+          maya: payload.maya,
           opencodeRouter: payload.opencodeRouter,
         },
-        "openwork-orchestrator",
+        "maya-orchestrator",
       );
     } else {
-      console.log("OpenWork orchestrator running");
+      console.log("MAYA orchestrator running");
       console.log(`Run ID: ${runId}`);
       console.log(`Workspace: ${payload.workspace}`);
       console.log(`OpenCode: ${payload.opencode.baseUrl}`);
@@ -5740,10 +5740,10 @@ async function runStart(args: ParsedArgs) {
       if (payload.opencode.username && payload.opencode.password) {
         console.log(`OpenCode auth: ${payload.opencode.username} / ${payload.opencode.password}`);
       }
-      console.log(`OpenWork server: ${payload.openwork.baseUrl}`);
-      console.log(`OpenWork connect URL: ${payload.openwork.connectUrl}`);
-      console.log(`Client token: ${payload.openwork.token}`);
-      console.log(`Host token: ${payload.openwork.hostToken}`);
+      console.log(`MAYA server: ${payload.maya.baseUrl}`);
+      console.log(`MAYA connect URL: ${payload.maya.connectUrl}`);
+      console.log(`Client token: ${payload.maya.token}`);
+      console.log(`Host token: ${payload.maya.hostToken}`);
     }
 
     if (detachRequested) {
@@ -5755,29 +5755,29 @@ async function runStart(args: ParsedArgs) {
         if (sandboxMode !== "none") {
           // In sandbox mode the released server binary may not support the
           // Bearer-through-proxy auth that the OpenCode SDK client expects.
-          // Run a lighter set of checks: openwork-server endpoints + proxy
+          // Run a lighter set of checks: maya-server endpoints + proxy
           // health.  Full SDK checks (session create, SSE events) are deferred
           // until the modified server binary is released.
           await runSandboxChecks({
-            openworkUrl: openworkBaseUrl,
-            openworkToken,
-            hostToken: openworkHostToken,
+            mayaUrl: mayaBaseUrl,
+            mayaToken,
+            hostToken: mayaHostToken,
           });
         } else {
           await runChecks({
             opencodeClient,
-            openworkUrl: openworkBaseUrl,
-            openworkToken,
-            hostToken: openworkHostToken,
+            mayaUrl: mayaBaseUrl,
+            mayaToken,
+            hostToken: mayaHostToken,
             checkEvents,
           });
         }
-        logger.info("Checks ok", { checkEvents }, "openwork-orchestrator");
+        logger.info("Checks ok", { checkEvents }, "maya-orchestrator");
         if (!outputJson && logFormat === "pretty") {
           console.log("Checks: ok");
         }
       } catch (error) {
-        logger.error("Checks failed", { error: String(error) }, "openwork-orchestrator");
+        logger.error("Checks failed", { error: String(error) }, "maya-orchestrator");
         await shutdown();
         tui?.stop();
         process.exit(1);
@@ -5796,7 +5796,7 @@ async function runStart(args: ParsedArgs) {
     logger.error(
       "Run failed",
       { error: error instanceof Error ? error.message : String(error) },
-      "openwork-orchestrator",
+      "maya-orchestrator",
     );
     process.exit(1);
   }
